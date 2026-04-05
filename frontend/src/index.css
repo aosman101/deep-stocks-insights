@@ -1,0 +1,67 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { @apply bg-surface text-white; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-surface; }
+  ::-webkit-scrollbar-thumb { @apply bg-surface-border rounded-full; }
+}
+
+@layer components {
+  .card {
+    @apply bg-surface-card border border-surface-border rounded-xl p-5;
+  }
+  .card-hover {
+    @apply card transition-all duration-200 hover:border-accent-blue/40 hover:bg-surface-hover;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2
+           font-medium text-sm transition-all duration-150 focus:outline-none
+           focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface disabled:opacity-50
+           disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn bg-accent-blue text-white hover:bg-blue-500 focus:ring-accent-blue;
+  }
+  .btn-ghost {
+    @apply btn text-slate-300 hover:bg-surface-hover hover:text-white focus:ring-surface-border;
+  }
+  .btn-danger {
+    @apply btn bg-accent-red text-white hover:bg-red-500 focus:ring-accent-red;
+  }
+  .input {
+    @apply w-full bg-surface border border-surface-border rounded-lg px-3 py-2
+           text-sm text-white placeholder-slate-500
+           focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent
+           transition-all duration-150;
+  }
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+  }
+  .badge-buy   { @apply badge bg-accent-green/20 text-accent-green; }
+  .badge-sell  { @apply badge bg-accent-red/20 text-accent-red; }
+  .badge-hold  { @apply badge bg-accent-amber/20 text-accent-amber; }
+  .badge-bull  { @apply badge bg-accent-green/20 text-accent-green; }
+  .badge-bear  { @apply badge bg-accent-red/20 text-accent-red; }
+  .badge-neu   { @apply badge bg-slate-500/20 text-slate-400; }
+  .stat-up   { @apply text-accent-green; }
+  .stat-down { @apply text-accent-red; }
+  .section-title {
+    @apply text-lg font-semibold text-white mb-4;
+  }
+  .label { @apply text-xs font-medium text-slate-400 uppercase tracking-wider; }
+}
+
+/* Recharts overrides for dark mode */
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line { stroke: #2a3347; }
+.recharts-tooltip-wrapper { outline: none !important; }
+.recharts-default-tooltip {
+  background: #161b27 !important;
+  border: 1px solid #2a3347 !important;
+  border-radius: 8px !important;
+  color: #fff !important;
+}
