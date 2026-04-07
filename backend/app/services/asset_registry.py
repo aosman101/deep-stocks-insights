@@ -89,6 +89,13 @@ def has_nhits(symbol: str) -> bool:
     return symbol.upper() in NHITS_FEATURED
 
 
+TFT_FEATURED = NHITS_FEATURED
+
+
+def has_tft(symbol: str) -> bool:
+    return symbol.upper() in TFT_FEATURED
+
+
 # Backward-compatible aliases for existing import paths.
 LSTM_FEATURED = NHITS_FEATURED
 

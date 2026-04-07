@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     MODEL_NHITS_HIDDEN_DIM: int = 256
     MODEL_NHITS_MLP_LAYERS: int = 3
     MODEL_NHITS_POOLING: str = "1,2,5"
+    MODEL_TFT_HIDDEN_DIM: int = 128
+    MODEL_TFT_HEADS: int = 4
+    MODEL_TFT_FF_DIM: int = 256
+    MODEL_TFT_BLOCKS: int = 2
     MODEL_DROPOUT: float = 0.2
     MODEL_BATCH_SIZE: int = 32
     MODEL_LEARNING_RATE: float = 0.0012
