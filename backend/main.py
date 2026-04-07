@@ -27,23 +27,10 @@ from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
 from app.logging_config import setup_logging, generate_request_id, request_id_var
+from app.services.model_output_service import get_model_disk_status
 
 setup_logging()
 logger = logging.getLogger(__name__)
-
-
-def _model_status_from_disk(asset: str) -> dict:
-    """Return lightweight N-HiTS model status without importing TensorFlow."""
-    weights_path = os.path.join(settings.MODEL_SAVE_PATH, f"nhits_{asset.lower()}.weights.h5")
-    meta_path = os.path.join(settings.MODEL_SAVE_PATH, f"nhits_{asset.lower()}_meta.txt")
-    version = "untrained"
-    if os.path.exists(meta_path):
-        with open(meta_path) as f:
-            version = f.read().strip() or version
-    return {
-        "trained": os.path.exists(weights_path),
-        "version": version,
-    }
 
 
 # ─────────────────────────────────────────────────────────────
@@ -65,13 +52,20 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.MODEL_SAVE_PATH, exist_ok=True)
 
     # 3. Keep startup lightweight; N-HiTS models load lazily on first use
-    from app.services.asset_registry import NHITS_FEATURED
+    from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
     for asset in sorted(NHITS_FEATURED):
-        status = _model_status_from_disk(asset)
+        status = get_model_disk_status(asset, "nhits")
         if status["trained"]:
             logger.info(f"  [{asset}] N-HiTS weights detected ✓ ({status['version']})")
         else:
             logger.info(f"  [{asset}] N-HiTS not trained yet — trigger /api/admin/train/{asset}")
+
+    for asset in sorted(TFT_FEATURED):
+        status = get_model_disk_status(asset, "tft")
+        if status["trained"]:
+            logger.info(f"  [{asset}] TFT weights detected ✓ ({status['version']})")
+        else:
+            logger.info(f"  [{asset}] TFT not trained yet — trigger /api/admin/train/{asset} with model_key=tft")
 
     # 4. Optional: retrain on startup if configured
     if settings.MODEL_RETRAIN_ON_STARTUP:
@@ -244,7 +238,7 @@ async def add_request_id(request: Request, call_next):
 # ─────────────────────────────────────────────────────────────
 
 from app.routers import auth, admin, market, predictions, analytics, ws, macro, scanner, finnhub, twelvedata, agent
-from app.services.asset_registry import NHITS_FEATURED
+    from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
 
 app.include_router(auth.router)
 app.include_router(admin.router)
@@ -269,7 +263,10 @@ def root():
         "version": settings.APP_VERSION,
         "status": "running",
         "docs": "/docs",
-        "assets_supported": sorted(NHITS_FEATURED),
+        "assets_supported": {
+            "nhits": sorted(NHITS_FEATURED),
+            "tft": sorted(TFT_FEATURED),
+        },
     }
 
 
@@ -278,8 +275,11 @@ def health():
     return {
         "status": "healthy",
         "models": {
-            asset: _model_status_from_disk(asset)
-            for asset in sorted(NHITS_FEATURED)
+            asset: {
+                "nhits": get_model_disk_status(asset, "nhits"),
+                "tft": get_model_disk_status(asset, "tft"),
+            }
+            for asset in sorted(NHITS_FEATURED | TFT_FEATURED)
         },
     }
 

@@ -61,6 +61,7 @@ export const marketApi = {
 export const predictionsApi = {
   predict:        (asset, h)        => api.get(`/api/predictions/${asset}`, { params: { horizon: h }, timeout: LONG_TIMEOUT }),
   getMultiHorizon:(asset)           => cachedGet(`/api/predictions/${asset}/multi`, { timeout: LONG_TIMEOUT }),
+  getWorkspace:   (asset)           => cachedGet(`/api/predictions/${asset}/workspace`, { timeout: LONG_TIMEOUT }),
   getHistory:     (asset, limit)    => cachedGet(`/api/predictions/${asset}/history`, { params: { limit } }),
   getPerformance: (asset)           => cachedGet(`/api/predictions/performance/${asset}`),
 }

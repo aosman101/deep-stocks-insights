@@ -1,8 +1,9 @@
 """
-Predictions Router — /api/predictions  (Actual N-HiTS model outputs)
-  GET  /{asset}            — single next-step prediction
-  GET  /{asset}/multi      — 1d / 3d / 7d multi-horizon predictions
-  GET  /{asset}/history    — past predictions stored in DB
+Predictions Router — /api/predictions
+  GET  /{asset}             — model prediction payload
+  GET  /{asset}/multi       — 1d / 3d / 7d sequence-model predictions
+  GET  /{asset}/workspace   — all available ML models in one schema
+  GET  /{asset}/history     — past predictions stored in DB
   GET  /performance/{asset} — model accuracy metrics
 """
 
@@ -20,13 +21,15 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/predictions", tags=["N-HiTS Predictions"])
 
-from app.services.asset_registry import NHITS_FEATURED
+from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
 
 
-def _validate_lstm_asset(asset: str) -> str:
+def _validate_sequence_asset(asset: str, model_key: str) -> str:
     asset = asset.upper()
-    if asset not in NHITS_FEATURED:
-        raise HTTPException(status_code=400, detail=f"N-HiTS supported assets: {sorted(NHITS_FEATURED)}")
+    supported = NHITS_FEATURED if model_key == "nhits" else TFT_FEATURED
+    label = "N-HiTS" if model_key == "nhits" else "TFT"
+    if asset not in supported:
+        raise HTTPException(status_code=400, detail=f"{label} supported assets: {sorted(supported)}")
     return asset
 
 
@@ -42,60 +45,62 @@ def _validate_asset(asset: str) -> str:
 async def predict_asset(
     asset: str,
     horizon: str = Query(default="1d", description="1d | 3d | 7d"),
+    model_key: str = Query(default="nhits", description="nhits | tft | lightgbm"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
-    Run the N-HiTS model for the given asset and return the prediction with
-    buy/sell/hold signal, confidence interval, and risk parameters.
-    Requires the model to be trained first (admin → /api/admin/train/{asset}).
+    Run one prediction model and return the shared model payload.
+    Only the default N-HiTS route persists to the historical predictions table.
     """
-    asset = _validate_lstm_asset(asset)
+    model_key = model_key.lower()
+    if model_key not in ("nhits", "tft", "lightgbm"):
+        raise HTTPException(status_code=400, detail="model_key must be nhits, tft, or lightgbm")
     if horizon not in ("1d", "3d", "7d"):
         raise HTTPException(status_code=400, detail="Horizon must be 1d, 3d, or 7d")
 
     try:
-        from app.services.indicators_service import compute_indicators
-        from app.services.market_service import get_historical_data
-        from app.services.prediction_service import run_lstm_prediction
-        from app.services.risk_service import attach_risk_to_prediction
-
-        # Get ATR for risk levels
-        df = await get_historical_data(asset, period="1y")
-        indicators = compute_indicators(df) if not df.empty else {}
-        atr = indicators.get("atr_14")
-
-        result = await run_lstm_prediction(asset, horizon)
-
-        if "error" in result:
-            raise HTTPException(status_code=503, detail=result["error"])
-
-        attach_risk_to_prediction(result, atr)
-
-        # Persist to DB
-        pred_row = Prediction(
-            asset=asset,
-            prediction_type="actual",
-            predicted_close=result["predicted_close"],
-            predicted_volume=result.get("predicted_volume"),
-            predicted_change_pct=result.get("predicted_change_pct"),
-            confidence=result.get("confidence"),
-            current_price=result.get("current_price"),
-            prediction_horizon=horizon,
-            signal=result.get("signal"),
-            signal_strength=result.get("signal_strength"),
-            stop_loss=result.get("stop_loss"),
-            take_profit=result.get("take_profit"),
-            risk_reward_ratio=result.get("risk_reward_ratio"),
-            model_version=result.get("model_version"),
-            mae_at_time=result.get("mae_at_time"),
-            notes=result.get("notes"),
-            created_by_user_id=current_user.id,
+        from app.services.prediction_service import (
+            run_lightgbm_model_prediction,
+            run_sequence_prediction,
         )
-        db.add(pred_row)
-        db.commit()
 
-        result["id"] = pred_row.id
+        if model_key == "lightgbm":
+            asset = _validate_asset(asset)
+            result = await run_lightgbm_model_prediction(asset)
+        else:
+            asset = _validate_sequence_asset(asset, model_key)
+            result = await run_sequence_prediction(asset, horizon=horizon, model_key=model_key)
+
+        if result.get("status") != "ok":
+            raise HTTPException(status_code=503, detail=result.get("error") or result.get("message"))
+
+        if model_key == "nhits":
+            pred = result.get("prediction") or {}
+            risk_standard = (result.get("risk") or {}).get("standard", {})
+            pred_row = Prediction(
+                asset=asset,
+                prediction_type="actual",
+                predicted_close=pred["predicted_close"],
+                predicted_volume=pred.get("predicted_volume"),
+                predicted_change_pct=pred.get("predicted_change_pct"),
+                confidence=pred.get("confidence"),
+                current_price=pred.get("current_price"),
+                prediction_horizon=horizon,
+                signal=pred.get("signal"),
+                signal_strength=pred.get("signal_strength"),
+                stop_loss=risk_standard.get("stop_loss"),
+                take_profit=risk_standard.get("take_profit"),
+                risk_reward_ratio=risk_standard.get("risk_reward_ratio"),
+                model_version=pred.get("model_version"),
+                mae_at_time=pred.get("mae_at_time"),
+                notes=pred.get("notes"),
+                created_by_user_id=current_user.id,
+            )
+            db.add(pred_row)
+            db.commit()
+            result["prediction"]["id"] = pred_row.id
+
         return result
 
     except HTTPException:
@@ -108,24 +113,45 @@ async def predict_asset(
 @router.get("/{asset}/multi", response_model=dict)
 async def multi_horizon_prediction(
     asset: str,
+    model_key: str = Query(default="nhits", description="nhits | tft"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Return 1d, 3d, and 7d N-HiTS predictions simultaneously."""
-    asset = _validate_lstm_asset(asset)
+    """Return 1d, 3d, and 7d sequence-model predictions simultaneously."""
+    del db, current_user
+    model_key = model_key.lower()
+    if model_key not in ("nhits", "tft"):
+        raise HTTPException(status_code=400, detail="model_key must be nhits or tft")
+    asset = _validate_sequence_asset(asset, model_key)
     try:
         from app.services.prediction_service import run_multi_horizon_prediction
 
-        result = await run_multi_horizon_prediction(asset)
-        if "error" in result.get("prediction_1d", {}):
+        result = await run_multi_horizon_prediction(asset, model_key=model_key)
+        if result.get("status") != "ok":
             raise HTTPException(
                 status_code=503,
-                detail=result["prediction_1d"]["error"]
+                detail=result.get("error") or result.get("message")
             )
         return result
     except HTTPException:
         raise
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/{asset}/workspace", response_model=dict)
+async def prediction_workspace(
+    asset: str,
+    _: User = Depends(get_current_active_user),
+):
+    """Return all available ML models for an asset in the shared schema."""
+    asset = _validate_asset(asset)
+    try:
+        from app.services.prediction_service import run_prediction_workspace
+
+        return await run_prediction_workspace(asset)
+    except Exception as e:
+        logger.error(f"Workspace prediction failed for {asset}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -112,24 +112,14 @@ async def predict_symbol(
     symbol: str,
     _: User = Depends(get_current_active_user),
 ):
-    """LightGBM prediction for any single asset (trains on demand if needed)."""
+    """LightGBM prediction for any single asset using the shared model schema."""
     symbol = symbol.upper()
     try:
-        from app.services.market_service import get_historical_data
-        df = await get_historical_data(symbol, period="1y")
-        if df.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+        from app.services.prediction_service import run_lightgbm_model_prediction
 
-        from app.services.lightgbm_service import predict_lightgbm, train_lightgbm
-
-        result = predict_lightgbm(symbol, df, settings.MODEL_SAVE_PATH)
-
-        # If untrained, auto-train and predict
-        if result.get("status") == "untrained":
-            train_result = train_lightgbm(symbol, df, settings.MODEL_SAVE_PATH)
-            if train_result.get("status") == "success":
-                result = predict_lightgbm(symbol, df, settings.MODEL_SAVE_PATH)
-
+        result = await run_lightgbm_model_prediction(symbol)
+        if result.get("status") == "error":
+            raise HTTPException(status_code=404, detail=result.get("error") or result.get("message"))
         return result
     except HTTPException:
         raise

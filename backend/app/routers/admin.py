@@ -141,21 +141,26 @@ async def trigger_training(
     _: User = Depends(get_current_admin),
 ):
     """
-    Trigger N-HiTS model training for the given asset.
+    Trigger sequence-model training for the given asset.
     Training runs asynchronously; check /admin/model-status for progress.
     """
-    from app.services.asset_registry import NHITS_FEATURED
+    from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
     asset = asset.upper()
-    if asset not in NHITS_FEATURED:
-        raise HTTPException(status_code=400, detail=f"Supported assets: {sorted(NHITS_FEATURED)}")
+    model_key = (payload.model_key if payload else "nhits").lower()
+    if model_key not in ("nhits", "tft"):
+        raise HTTPException(status_code=400, detail="model_key must be nhits or tft")
+
+    supported_assets = NHITS_FEATURED if model_key == "nhits" else TFT_FEATURED
+    if asset not in supported_assets:
+        raise HTTPException(status_code=400, detail=f"Supported assets: {sorted(supported_assets)}")
 
     period = payload.period if payload else "2y"
     epochs = payload.epochs if payload and payload.epochs else None
 
-    logger.info(f"Admin triggered training for {asset}")
+    logger.info(f"Admin triggered {model_key} training for {asset}")
     from app.services.prediction_service import train_model
 
-    result = await train_model(asset, period=period, epochs=epochs)
+    result = await train_model(asset, period=period, epochs=epochs, model_key=model_key)
 
     return TrainModelResponse(
         asset=asset,
@@ -170,13 +175,15 @@ async def trigger_training(
 @router.get("/model-status")
 def model_status(_: User = Depends(get_current_admin)):
     """Report training status for each asset model."""
-    from app.ml.nhits_model import get_model
-    from app.services.asset_registry import NHITS_FEATURED
+    from app.ml.nhits_model import get_model as get_nhits_model
+    from app.ml.tft_model import get_model as get_tft_model
+    from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
 
-    status_report = {}
+    status_report = {asset: {} for asset in sorted(NHITS_FEATURED | TFT_FEATURED)}
+
     for asset in sorted(NHITS_FEATURED):
-        model = get_model(asset)
-        status_report[asset] = {
+        model = get_nhits_model(asset)
+        status_report[asset]["nhits"] = {
             "is_trained": model.is_trained,
             "version": model.version,
             "lookback": model.lookback,
@@ -184,6 +191,22 @@ def model_status(_: User = Depends(get_current_admin)):
             "hidden_dim": model.hidden_dim,
             "mlp_layers": model.mlp_layers,
             "dropout": model.dropout,
+        }
+
+    for asset in sorted(TFT_FEATURED):
+        model = get_tft_model(asset)
+        status_report[asset] = {
+            **status_report.get(asset, {}),
+            "tft": {
+                "is_trained": model.is_trained,
+                "version": model.version,
+                "lookback": model.lookback,
+                "hidden_dim": model.hidden_dim,
+                "num_heads": model.num_heads,
+                "ff_dim": model.ff_dim,
+                "blocks": model.blocks,
+                "dropout": model.dropout,
+            },
         }
     return status_report
 
