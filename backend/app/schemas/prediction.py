@@ -107,7 +107,7 @@ class ModelPerformance(PredictionSchema):
 
 
 class TrainModelRequest(PredictionSchema):
-    asset: str
+    asset: Optional[str] = None
     period: str = "2y"             # how much historical data to train on
     epochs: Optional[int] = None   # override default if desired
     model_key: str = "nhits"

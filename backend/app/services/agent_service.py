@@ -18,7 +18,6 @@ from app.models.agent import (
     AgentStatus, TradeSide, TradeStatus,
 )
 from app.services.market_service import get_live_quote
-from app.services.prediction_service import get_prediction
 from app.services.risk_service import compute_risk_levels
 
 logger = logging.getLogger(__name__)
@@ -254,9 +253,9 @@ def _take_snapshot(session: AgentSession, db: Session):
 
 async def get_prediction(asset: str, horizon: str = "1d") -> Dict:
     """Wrapper to get prediction from the prediction service."""
-    from app.services.prediction_service import predict as svc_predict
+    from app.services.prediction_service import run_sequence_prediction
     try:
-        return await svc_predict(asset, horizon)
+        return await run_sequence_prediction(asset, horizon=horizon)
     except Exception as e:
         logger.warning(f"Agent prediction failed for {asset}: {e}")
         return {}

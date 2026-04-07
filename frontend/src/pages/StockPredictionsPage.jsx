@@ -185,7 +185,7 @@ export default function StockPredictionsPage() {
           )}
 
           {/* Train button for untrained models */}
-          {pred.status === 'indicator_only' && (
+          {pred.status === 'untrained' && (
             <div className="card text-center py-6">
               <Shield className="w-10 h-10 text-yellow-400 mx-auto mb-3" />
               <p className="text-white font-medium mb-1">LightGBM model not trained for {asset}</p>

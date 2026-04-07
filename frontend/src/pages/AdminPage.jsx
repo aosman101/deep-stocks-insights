@@ -87,7 +87,7 @@ function TrainingPanel() {
         Model Training
       </h2>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <div className="bg-surface-hover rounded-xl p-4 border border-surface-border">
           <p className="text-sm font-medium text-white mb-1">N-HiTS Models</p>
           <p className="text-xs text-gray-400 mb-3">
@@ -96,6 +96,23 @@ function TrainingPanel() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {LSTM_FEATURED_SYMBOLS.map(asset => (
               <TrainAssetButton key={asset} asset={asset} apiCall={() => adminApi.trainModel(asset)} />
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-surface-hover rounded-xl p-4 border border-surface-border">
+          <p className="text-sm font-medium text-white mb-1">TFT Models</p>
+          <p className="text-xs text-gray-400 mb-3">
+            Train the transformer-style sequence stack on the same featured assets
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {LSTM_FEATURED_SYMBOLS.map(asset => (
+              <TrainAssetButton
+                key={`${asset}-tft`}
+                asset={asset}
+                label="TFT"
+                apiCall={() => adminApi.trainModel(asset, { model_key: 'tft' })}
+              />
             ))}
           </div>
         </div>
@@ -135,7 +152,7 @@ function TrainingPanel() {
   )
 }
 
-function TrainAssetButton({ asset, apiCall }) {
+function TrainAssetButton({ asset, apiCall, label = 'N-HiTS' }) {
   const [state, setState] = useState('idle')   // idle | loading | ok | error
   const handle = async () => {
     setState('loading')
@@ -154,7 +171,7 @@ function TrainAssetButton({ asset, apiCall }) {
       disabled={state === 'loading'}
       className="w-full flex items-center justify-between px-3 py-2 bg-surface rounded-lg border border-surface-border hover:border-accent-blue/50 transition-colors text-sm disabled:opacity-50"
     >
-      <span className="font-mono font-medium text-white">{asset} N-HiTS</span>
+      <span className="font-mono font-medium text-white">{asset} {label}</span>
       <span className={`text-xs ${
         state === 'ok'      ? 'text-green-400' :
         state === 'error'   ? 'text-red-400' :
@@ -250,11 +267,19 @@ export default function AdminPage() {
           <div className="grid grid-cols-3 gap-3">
             {Object.entries(health.models ?? {}).map(([asset, info]) => (
               <div key={asset} className="bg-surface-hover rounded-lg px-3 py-2">
-                <p className="text-xs text-gray-400 font-medium">{asset} N-HiTS</p>
-                <p className={`text-sm font-semibold mt-0.5 ${info.trained ? 'text-green-400' : 'text-yellow-400'}`}>
-                  {info.trained ? '✓ Trained' : '⚠ Not trained'}
-                </p>
-                {info.version && <p className="text-xs text-gray-600 mt-0.5">{info.version}</p>}
+                <p className="text-xs text-gray-400 font-medium">{asset}</p>
+                {['nhits', 'tft'].map((modelKey) => {
+                  const model = info?.[modelKey]
+                  if (!model) return null
+                  return (
+                    <div key={modelKey} className="mt-1">
+                      <p className={`text-sm font-semibold ${model.trained ? 'text-green-400' : 'text-yellow-400'}`}>
+                        {modelKey.toUpperCase()}: {model.trained ? '✓ Trained' : '⚠ Not trained'}
+                      </p>
+                      {model.version && <p className="text-xs text-gray-600">{model.version}</p>}
+                    </div>
+                  )
+                })}
               </div>
             ))}
           </div>
