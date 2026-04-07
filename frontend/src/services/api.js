@@ -110,6 +110,20 @@ export const finnhubApi = {
   profile:        (symbol)         => cachedGet(`/api/finnhub/profile/${symbol}`),
 }
 
+// ── Agent ────────────────────────────────────────────────────
+export const agentApi = {
+  createSession:  (data)           => api.post('/api/agent/sessions', data),
+  getSessions:    ()               => api.get('/api/agent/sessions'),
+  getSession:     (id)             => api.get(`/api/agent/sessions/${id}`),
+  updateSession:  (id, data)       => api.patch(`/api/agent/sessions/${id}`, data),
+  deleteSession:  (id)             => api.delete(`/api/agent/sessions/${id}`),
+  runCycle:       (id)             => api.post(`/api/agent/sessions/${id}/run`, null, { timeout: LONG_TIMEOUT }),
+  getTrades:      (id, status)     => api.get(`/api/agent/sessions/${id}/trades`, { params: { status } }),
+  closeTrade:     (sid, tid, data) => api.post(`/api/agent/sessions/${sid}/trades/${tid}/close`, data),
+  getStats:       (id)             => api.get(`/api/agent/sessions/${id}/stats`),
+  getEquity:      (id)             => api.get(`/api/agent/sessions/${id}/equity`),
+}
+
 // ── Admin ────────────────────────────────────────────────────
 export const adminApi = {
   getUsers:       (skip, limit)     => api.get('/api/admin/users', { params: { skip, limit } }),

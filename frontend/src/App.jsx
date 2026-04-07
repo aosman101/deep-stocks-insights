@@ -14,6 +14,7 @@ const AIInsightsPage = lazy(() => import('./pages/AIInsightsPage'))
 const AdminPage = lazy(() => import('./pages/AdminPage'))
 const LearnPage = lazy(() => import('./pages/LearnPage'))
 const ProfilePage = lazy(() => import('./pages/ProfilePage'))
+const AgentPage = lazy(() => import('./pages/AgentPage'))
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()

@@ -243,7 +243,7 @@ async def add_request_id(request: Request, call_next):
 #  Routers
 # ─────────────────────────────────────────────────────────────
 
-from app.routers import auth, admin, market, predictions, analytics, ws, macro, scanner, finnhub, twelvedata
+from app.routers import auth, admin, market, predictions, analytics, ws, macro, scanner, finnhub, twelvedata, agent
 from app.services.asset_registry import NHITS_FEATURED
 
 app.include_router(auth.router)
@@ -255,6 +255,7 @@ app.include_router(macro.router)
 app.include_router(scanner.router)
 app.include_router(finnhub.router)
 app.include_router(twelvedata.router)
+app.include_router(agent.router)
 app.include_router(ws.router)
 
 # ─────────────────────────────────────────────────────────────
