@@ -18,15 +18,17 @@ import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from app.config import settings
+from app.logging_config import setup_logging, generate_request_id, request_id_var
 
-logging.basicConfig(
-    level=logging.DEBUG if settings.DEBUG else logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(name)s — %(message)s",
-)
+setup_logging()
 logger = logging.getLogger(__name__)
 
 
@@ -100,12 +102,16 @@ async def lifespan(app: FastAPI):
             db.close()
 
     async def verify_predictions():
-        """Background task: fill in actual_close for past predictions (runs every 6 hours)."""
+        """Background task: fill in actual_close for past predictions using historical prices."""
         from app.models.prediction import Prediction
+        from app.services.market_service import get_historical_data
         from datetime import timedelta
         db = SessionLocal()
         try:
-            # Find unverified predictions older than 24 hours
+            # Horizon durations for computing the target date
+            horizon_hours = {"1d": 24, "3d": 72, "7d": 168}
+
+            # Find unverified predictions whose target date has passed
             cutoff = datetime.utcnow() - timedelta(hours=24)
             unverified = (
                 db.query(Prediction)
@@ -119,15 +125,44 @@ async def lifespan(app: FastAPI):
             if not unverified:
                 return
 
+            # Group by asset to fetch historical data once per asset
+            assets = set(p.asset for p in unverified)
+            hist_cache = {}
+            for asset in assets:
+                try:
+                    df = await get_historical_data(asset, period="1mo", interval="1d")
+                    if not df.empty:
+                        df["timestamp"] = df["timestamp"].dt.tz_localize(None)
+                        hist_cache[asset] = df
+                except Exception as e:
+                    logger.warning(f"Failed to fetch history for {asset} verification: {e}")
+
             for pred in unverified:
                 try:
-                    quote = await get_live_quote(pred.asset)
-                    actual = quote.get("price")
+                    h = horizon_hours.get(pred.prediction_horizon, 24)
+                    target_date = pred.created_at.replace(tzinfo=None) + timedelta(hours=h)
+
+                    # Skip if target date hasn't passed yet
+                    if target_date > datetime.utcnow():
+                        continue
+
+                    df = hist_cache.get(pred.asset)
+                    if df is None or df.empty:
+                        continue
+
+                    # Find the closest candle to the target date
+                    df["_dist"] = abs(df["timestamp"] - target_date)
+                    closest = df.loc[df["_dist"].idxmin()]
+
+                    # Only use if within 2 days of target
+                    if closest["_dist"] > timedelta(days=2):
+                        continue
+
+                    actual = float(closest["close"])
                     if actual and actual > 0:
                         pred.actual_close = actual
                         pred.verified_at = datetime.utcnow()
                         pred.abs_error = abs(pred.predicted_close - actual)
-                        # Direction check: predicted vs current at time of prediction
                         if pred.current_price:
                             pred_dir = pred.predicted_close > pred.current_price
                             actual_dir = actual > pred.current_price
@@ -162,6 +197,8 @@ async def lifespan(app: FastAPI):
 #  FastAPI app
 # ─────────────────────────────────────────────────────────────
 
+limiter = Limiter(key_func=get_remote_address, default_limits=["60/minute"])
+
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
@@ -174,6 +211,9 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # ─────────────────────────────────────────────────────────────
 #  CORS
 # ─────────────────────────────────────────────────────────────
@@ -185,6 +225,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─────────────────────────────────────────────────────────────
+#  Request ID middleware
+# ─────────────────────────────────────────────────────────────
+
+@app.middleware("http")
+async def add_request_id(request: Request, call_next):
+    rid = request.headers.get("X-Request-ID", generate_request_id())
+    token = request_id_var.set(rid)
+    response = await call_next(request)
+    response.headers["X-Request-ID"] = rid
+    request_id_var.reset(token)
+    return response
 
 # ─────────────────────────────────────────────────────────────
 #  Routers

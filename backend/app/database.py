@@ -32,5 +32,5 @@ def get_db():
 def create_all_tables():
     """Create all tables defined in models. Called at app startup."""
     # Import models so SQLAlchemy registers them before creating tables
-    from app.models import user, prediction, price_cache  # noqa: F401
+    from app.models import user, prediction, price_cache, agent  # noqa: F401
     Base.metadata.create_all(bind=engine)

@@ -35,6 +35,12 @@ aiohttp==3.9.5
 # --- Scheduling ---
 apscheduler==3.10.4
 
+# --- Rate Limiting ---
+slowapi==0.1.9
+
+# --- Logging ---
+python-json-logger==2.0.7
+
 # --- Utilities ---
 python-dotenv==1.0.1
 pydantic-settings==2.3.0
