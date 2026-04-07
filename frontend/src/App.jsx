@@ -64,6 +64,7 @@ export default function App() {
         <Route path="comparison"       element={<ComparisonPage />} />
         <Route path="history"          element={<Navigate to="/graph-analysis?period=25y" replace />} />
         <Route path="ai-insights"      element={<AIInsightsPage />} />
+        <Route path="agent"            element={<AgentPage />} />
         <Route path="learn"             element={<LearnPage />} />
         <Route path="profile"          element={<ProfilePage />} />
         <Route path="admin"            element={

@@ -12,6 +12,7 @@ import {
   Cpu,
   User,
   X,
+  Bot,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
@@ -20,6 +21,7 @@ const NAV_ITEMS = [
   { to: '/graph-analysis',label: 'Graph Analysis', icon: LineChart },
   { to: '/comparison',    label: 'Comparison',     icon: GitCompare },
   { to: '/ai-insights',   label: 'AI Insights',    icon: Sparkles },
+  { to: '/agent',         label: 'Agent Dashboard', icon: Bot },
   { to: '/learn',         label: 'Learn & Markets', icon: BookOpen },
 ]
 

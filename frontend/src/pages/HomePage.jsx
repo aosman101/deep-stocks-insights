@@ -9,7 +9,7 @@ import LoadingSpinner from '../components/ui/LoadingSpinner'
 import NewsFeed from '../components/ui/NewsFeed'
 import {
   TrendingUp, TrendingDown, Activity, BarChart2,
-  Zap, Globe, ArrowRight,
+  Zap, Globe, ArrowRight, Bot,
 } from 'lucide-react'
 
 const TOP_ASSETS = ['BTC', 'ETH', 'GOLD', 'TSLA', 'AAPL', 'MSFT', 'NVDA', 'AMZN']
@@ -139,6 +139,13 @@ export default function HomePage() {
         </div>
         <div className="flex gap-3">
           <button
+            onClick={() => navigate('/agent')}
+            className="flex items-center gap-2 px-4 py-2 bg-surface-hover border border-surface-border rounded-lg text-sm text-white hover:border-accent-blue/50 transition-colors"
+          >
+            <Bot className="w-4 h-4" />
+            Agent Dashboard
+          </button>
+          <button
             onClick={() => navigate('/ai-insights')}
             className="btn-primary flex items-center gap-2 text-sm"
           >
@@ -156,12 +163,13 @@ export default function HomePage() {
       </div>
 
       {/* Quick nav cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-5">
         {[
           { label: 'Predict',            path: '/predict',       icon: TrendingUp,  color: 'text-btc',         desc: 'Unified N-HiTS + LightGBM predictions' },
           { label: 'Graph Analysis',     path: '/graph-analysis',icon: Activity,    color: 'text-green-400',   desc: 'Full indicator suite' },
           { label: 'Comparison',         path: '/comparison',    icon: BarChart2,   color: 'text-accent-blue', desc: 'Backtests and model scoring' },
           { label: 'AI Insights',        path: '/ai-insights',   icon: Zap,         color: 'text-yellow-400',  desc: 'Market scanner & ranking' },
+          { label: 'Agent Dashboard',    path: '/agent',         icon: Bot,         color: 'text-accent-blue', desc: 'Paper-trading sessions and equity tracking' },
         ].map(({ label, path, icon: Icon, color, desc }) => (
           <button
             key={path}
