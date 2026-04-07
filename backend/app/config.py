@@ -41,10 +41,16 @@ class Settings(BaseSettings):
 
     # CORS
     ALLOWED_ORIGINS: str = "http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000"
+    # Production domain — set via DOMAIN env var in docker-compose
+    DOMAIN: str = ""
 
     @property
     def cors_origins(self) -> List[str]:
-        return [o.strip() for o in self.ALLOWED_ORIGINS.split(",")]
+        origins = [o.strip() for o in self.ALLOWED_ORIGINS.split(",") if o.strip()]
+        if self.DOMAIN:
+            origins.append(f"https://{self.DOMAIN}")
+            origins.append(f"http://{self.DOMAIN}")
+        return origins
 
     @field_validator("DEBUG", mode="before")
     @classmethod
