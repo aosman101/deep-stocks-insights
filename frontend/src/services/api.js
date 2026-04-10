@@ -6,13 +6,18 @@ const TRAINING_TIMEOUT = 120_000
 
 const api = axios.create({ baseURL: '/', timeout: DEFAULT_TIMEOUT })
 
-// 401 interceptor (auth bypass mode — no redirect, just clean up stale token)
+// Auto-logout on 401 — but skip the login endpoint itself so the form can
+// display "Invalid username or password" instead of silently reloading the page.
 api.interceptors.response.use(
   r => r,
   err => {
-    if (err.response?.status === 401) {
+    const isLoginCall = err.config?.url?.includes('/api/auth/login')
+    if (err.response?.status === 401 && !isLoginCall) {
       localStorage.removeItem('dsi_token')
       delete api.defaults.headers.common['Authorization']
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login'
+      }
     }
     return Promise.reject(err)
   }
