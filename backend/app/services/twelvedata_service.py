@@ -33,8 +33,10 @@ async def _get(endpoint: str, params: dict | None = None) -> dict | list:
     params["apikey"] = _api_key()
     async with httpx.AsyncClient(timeout=15.0) as client:
         resp = await client.get(f"{TWELVE_BASE}{endpoint}", params=params)
-        resp.raise_for_status()
         data = resp.json()
+        if resp.status_code in (401, 403):
+            raise ValueError(data.get("message", "TWELVE_DATA_API_KEY is invalid or not authorized."))
+        resp.raise_for_status()
         if isinstance(data, dict) and data.get("status") == "error":
             raise ValueError(data.get("message", "Twelve Data API error"))
         return data

@@ -4,6 +4,7 @@ Reads settings from environment variables / .env file.
 """
 
 import logging
+import re
 from secrets import token_urlsafe
 from typing import List
 
@@ -11,6 +12,7 @@ from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
+_INLINE_COMMENT_RE = re.compile(r"\s+#.*$")
 
 
 class Settings(BaseSettings):
@@ -75,6 +77,37 @@ class Settings(BaseSettings):
             value = value.strip()
             return value or None
         return value
+
+    @field_validator("GOLD_API_KEY", "FRED_API_KEY", "FINNHUB_API_KEY", "TWELVE_DATA_API_KEY", mode="before")
+    @classmethod
+    def normalize_optional_api_keys(cls, value):
+        """
+        Treat blank values, comment-only values, and placeholder strings as unset.
+        This makes `.env` lines such as `API_KEY=  # optional` behave as intended.
+        """
+        if value is None:
+            return ""
+        if not isinstance(value, str):
+            return value
+
+        cleaned = _INLINE_COMMENT_RE.sub("", value).strip()
+        if not cleaned or cleaned.startswith("#"):
+            return ""
+
+        lowered = cleaned.lower()
+        if lowered in {
+            "your-api-key-here",
+            "your-fred-api-key-here",
+            "your-finnhub-api-key-here",
+            "your-twelve-data-api-key-here",
+            "your-gold-api-key-here",
+            "replace-with-a-real-api-key",
+            "replace-me",
+            "changeme",
+        }:
+            return ""
+
+        return cleaned
 
     @model_validator(mode="after")
     def apply_security_defaults(self):

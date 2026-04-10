@@ -32,6 +32,8 @@ async def _get(endpoint: str, params: dict | None = None) -> dict | list:
     params["token"] = _api_key()
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.get(f"{FINNHUB_BASE}{endpoint}", params=params)
+        if resp.status_code == 401:
+            raise ValueError("FINNHUB_API_KEY is invalid or not authorized.")
         if resp.status_code == 403:
             raise PermissionError("This Finnhub endpoint requires a premium subscription.")
         resp.raise_for_status()

@@ -268,6 +268,14 @@ async def get_macro_snapshot(fred_api_key: Optional[str] = None) -> Dict:
                 }
             except Exception as e:
                 logger.warning(f"FRED task failed for {name}: {e}")
+
+        # Fill missing/unusable FRED results with fallback values instead of
+        # returning `source: FRED` entries whose values are null.
+        fallback_macro = await _fallback_macro()
+        for name, fallback_value in fallback_macro.items():
+            current = macro_data.get(name)
+            if not current or current.get("value") is None:
+                macro_data[name] = fallback_value
     else:
         macro_data = await _fallback_macro()
 
