@@ -98,12 +98,13 @@ async def lifespan(app: FastAPI):
     async def verify_predictions():
         """Background task: fill in actual_close for past predictions using historical prices."""
         from app.models.prediction import Prediction
+        from app.services.model_health_service import refresh_prediction_history_metrics
         from app.services.market_service import get_historical_data
         from datetime import timedelta
         db = SessionLocal()
         try:
             # Horizon durations for computing the target date
-            horizon_hours = {"1d": 24, "3d": 72, "7d": 168}
+            horizon_hours = {"1d": 24, "3d": 72, "5d": 120, "7d": 168}
 
             # Find unverified predictions whose target date has passed
             cutoff = datetime.utcnow() - timedelta(hours=24)
@@ -167,6 +168,7 @@ async def lifespan(app: FastAPI):
             db.commit()
             verified_count = sum(1 for p in unverified if p.actual_close is not None)
             if verified_count:
+                refresh_prediction_history_metrics(db, days=30)
                 logger.info(f"Verified {verified_count} predictions")
         except Exception as e:
             logger.warning(f"Prediction verification job failed: {e}")

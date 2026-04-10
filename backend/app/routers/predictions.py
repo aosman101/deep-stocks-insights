@@ -16,6 +16,7 @@ from app.database import get_db
 from app.models.prediction import Prediction
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
+from app.schemas.prediction import GeneratePredictionsRequest
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +46,7 @@ def _validate_asset(asset: str) -> str:
 async def predict_asset(
     asset: str,
     horizon: str = Query(default="1d", description="1d | 3d | 7d"),
-    model_key: str = Query(default="nhits", description="nhits | tft | lightgbm"),
+    model_key: str = Query(default="nhits", description="nhits | tft | lightgbm | ensemble"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -54,54 +55,39 @@ async def predict_asset(
     Only the default N-HiTS route persists to the historical predictions table.
     """
     model_key = model_key.lower()
-    if model_key not in ("nhits", "tft", "lightgbm"):
-        raise HTTPException(status_code=400, detail="model_key must be nhits, tft, or lightgbm")
+    if model_key not in ("nhits", "tft", "lightgbm", "ensemble"):
+        raise HTTPException(status_code=400, detail="model_key must be nhits, tft, lightgbm, or ensemble")
     if horizon not in ("1d", "3d", "7d"):
         raise HTTPException(status_code=400, detail="Horizon must be 1d, 3d, or 7d")
 
     try:
         from app.services.prediction_service import (
+            run_ensemble_prediction,
             run_lightgbm_model_prediction,
             run_sequence_prediction,
         )
+        from app.services.prediction_record_service import persist_model_response
 
         if model_key == "lightgbm":
             asset = _validate_asset(asset)
             result = await run_lightgbm_model_prediction(asset)
+        elif model_key == "ensemble":
+            asset = _validate_asset(asset)
+            if horizon != "1d":
+                raise HTTPException(status_code=400, detail="Ensemble predictions currently support only horizon=1d")
+            result = await run_ensemble_prediction(asset)
         else:
             asset = _validate_sequence_asset(asset, model_key)
             result = await run_sequence_prediction(asset, horizon=horizon, model_key=model_key)
 
         if result.get("status") != "ok":
             raise HTTPException(status_code=503, detail=result.get("error") or result.get("message"))
-
-        if model_key == "nhits":
-            pred = result.get("prediction") or {}
-            risk_standard = (result.get("risk") or {}).get("standard", {})
-            pred_row = Prediction(
-                asset=asset,
-                prediction_type="actual",
-                predicted_close=pred["predicted_close"],
-                predicted_volume=pred.get("predicted_volume"),
-                predicted_change_pct=pred.get("predicted_change_pct"),
-                confidence=pred.get("confidence"),
-                current_price=pred.get("current_price"),
-                prediction_horizon=horizon,
-                signal=pred.get("signal"),
-                signal_strength=pred.get("signal_strength"),
-                stop_loss=risk_standard.get("stop_loss"),
-                take_profit=risk_standard.get("take_profit"),
-                risk_reward_ratio=risk_standard.get("risk_reward_ratio"),
-                model_version=pred.get("model_version"),
-                mae_at_time=pred.get("mae_at_time"),
-                notes=pred.get("notes"),
-                created_by_user_id=current_user.id,
-            )
-            db.add(pred_row)
-            db.commit()
-            result["prediction"]["id"] = pred_row.id
-
-        return result
+        return persist_model_response(
+            db,
+            result,
+            user_id=current_user.id,
+            trigger_source="manual",
+        )
 
     except HTTPException:
         raise
@@ -118,7 +104,7 @@ async def multi_horizon_prediction(
     current_user: User = Depends(get_current_active_user),
 ):
     """Return 1d, 3d, and 7d sequence-model predictions simultaneously."""
-    del db, current_user
+    from app.services.prediction_record_service import persist_model_response
     model_key = model_key.lower()
     if model_key not in ("nhits", "tft"):
         raise HTTPException(status_code=400, detail="model_key must be nhits or tft")
@@ -132,7 +118,12 @@ async def multi_horizon_prediction(
                 status_code=503,
                 detail=result.get("error") or result.get("message")
             )
-        return result
+        return persist_model_response(
+            db,
+            result,
+            user_id=current_user.id,
+            trigger_source="manual",
+        )
     except HTTPException:
         raise
     except Exception as e:
@@ -153,6 +144,70 @@ async def prediction_workspace(
     except Exception as e:
         logger.error(f"Workspace prediction failed for {asset}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate", response_model=dict)
+async def generate_predictions(
+    payload: GeneratePredictionsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """
+    Generate and optionally persist a prediction snapshot across multiple assets/models.
+    This gives the website a single action to refresh the model ledger before the agent runs.
+    """
+    from app.services.prediction_service import (
+        run_ensemble_prediction,
+        run_lightgbm_model_prediction,
+        run_multi_horizon_prediction,
+        run_sequence_prediction,
+        run_analytics_prediction,
+    )
+    from app.services.prediction_record_service import persist_analytics_response, persist_model_response
+
+    supported_model_keys = {"ensemble", "nhits", "tft", "lightgbm"}
+    requested_models = [model_key.lower() for model_key in payload.model_keys]
+    invalid = [model for model in requested_models if model not in supported_model_keys]
+    if invalid:
+        raise HTTPException(status_code=400, detail=f"Unsupported model_keys: {invalid}")
+
+    results = []
+    for raw_asset in payload.assets:
+        asset = _validate_asset(raw_asset)
+        asset_runs = []
+        for model_key in requested_models:
+            if model_key == "ensemble":
+                result = await run_ensemble_prediction(asset)
+            elif model_key == "lightgbm":
+                result = await run_lightgbm_model_prediction(asset)
+            elif model_key == "nhits":
+                if asset not in NHITS_FEATURED:
+                    continue
+                result = await run_multi_horizon_prediction(asset, model_key="nhits")
+            elif model_key == "tft":
+                if asset not in TFT_FEATURED:
+                    continue
+                result = await run_multi_horizon_prediction(asset, model_key="tft")
+            else:
+                continue
+
+            if payload.persist and result.get("status") == "ok":
+                result = persist_model_response(db, result, user_id=current_user.id, trigger_source="refresh")
+            asset_runs.append(result)
+
+        if payload.include_analytics:
+            analytics = await run_analytics_prediction(asset)
+            if payload.persist and "error" not in analytics:
+                analytics = persist_analytics_response(db, analytics, user_id=current_user.id, trigger_source="refresh")
+            asset_runs.append(analytics)
+
+        results.append({"asset": asset, "runs": asset_runs})
+
+    return {
+        "generated_at": datetime.utcnow(),
+        "persisted": payload.persist,
+        "assets": results,
+    }
 
 
 @router.get("/{asset}/history", response_model=list[dict])
@@ -179,6 +234,10 @@ def prediction_history(
         {
             "id": r.id,
             "asset": r.asset,
+            "model_key": r.model_key,
+            "run_id": r.run_id,
+            "trigger_source": r.trigger_source,
+            "input_window_end": r.input_window_end,
             "predicted_close": r.predicted_close,
             "predicted_change_pct": r.predicted_change_pct,
             "confidence": r.confidence,
@@ -212,7 +271,6 @@ def model_performance(
         db.query(Prediction)
         .filter(
             Prediction.asset == asset,
-            Prediction.prediction_type == "actual",
             Prediction.actual_close.isnot(None),
         )
         .all()
@@ -235,6 +293,20 @@ def model_performance(
     mape = float(np.mean(pct_errors))
     da = float(correct / len(verified) * 100)
 
+    by_model = {}
+    for model_key in sorted({(p.model_key or "nhits") for p in verified}):
+        model_rows = [p for p in verified if (p.model_key or "nhits") == model_key]
+        model_errors = [abs(p.predicted_close - p.actual_close) for p in model_rows]
+        model_pct_errors = [abs(p.predicted_close - p.actual_close) / p.actual_close * 100 for p in model_rows]
+        model_correct = sum(1 for p in model_rows if p.was_correct_direction)
+        by_model[model_key] = {
+            "total_predictions": len(model_rows),
+            "mae": round(float(np.mean(model_errors)), 4),
+            "rmse": round(float(np.sqrt(np.mean([e**2 for e in model_errors]))), 4),
+            "mape": round(float(np.mean(model_pct_errors)), 4),
+            "directional_accuracy": round(float(model_correct / len(model_rows) * 100), 2),
+        }
+
     return {
         "asset": asset,
         "total_predictions": len(verified),
@@ -243,5 +315,6 @@ def model_performance(
         "rmse": round(rmse, 4),
         "mape": round(mape, 4),
         "directional_accuracy": round(da, 2),
+        "by_model": by_model,
         "computed_at": datetime.utcnow(),
     }

@@ -131,10 +131,10 @@ async def _ensure_sequence_model_ready(asset: str, model_key: str, df: pd.DataFr
     model = _get_sequence_model(asset, model_key, n_features=len(proc.feature_names))
 
     if not model.is_trained:
-        logger.warning(f"[{asset}] {get_model_label(model_key)} is not trained. Attempting training now...")
-        result = await train_model(asset, model_key=model_key)
-        if result.get("status") != "success":
-            return None, None, None, result.get("message") or result.get("error")
+        return None, None, None, (
+            f"{get_model_label(model_key)} is not trained for {asset}. "
+            f"Queue /api/admin/train/{asset}?model_key={model_key} first."
+        )
 
     if not proc.fitted:
         return None, None, None, f"Preprocessor for {asset} is not fitted."
@@ -375,7 +375,7 @@ async def run_multi_horizon_prediction(
 
 async def run_lightgbm_model_prediction(
     asset: str,
-    auto_train: bool = True,
+    auto_train: bool = False,
     df: Optional[pd.DataFrame] = None,
 ) -> Dict:
     asset = asset.upper()

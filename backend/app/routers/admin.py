@@ -12,7 +12,7 @@ Admin Router — /api/admin  (requires admin role)
 
 import logging
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -20,7 +20,7 @@ from app.models.user import User
 from app.models.prediction import Prediction
 from app.models.price_cache import PriceCache, LiveQuote
 from app.schemas.user import UserCreate, UserUpdate, UserResponse, UserListResponse
-from app.schemas.prediction import TrainModelRequest, TrainModelResponse
+from app.schemas.prediction import TrainModelRequest, TrainModelResponse, TrainingJobResponse
 from app.core.security import hash_password
 from app.core.dependencies import get_current_admin
 
@@ -137,39 +137,60 @@ def deactivate_user(
 async def trigger_training(
     asset: str,
     payload: TrainModelRequest = None,
-    background_tasks: BackgroundTasks = BackgroundTasks(),
     _: User = Depends(get_current_admin),
 ):
     """
-    Trigger sequence-model training for the given asset.
-    Training runs asynchronously; check /admin/model-status for progress.
+    Queue model training for the given asset.
+    Training runs asynchronously; check /admin/training-jobs or /admin/model-status for progress.
     """
     from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
+    from app.services.training_job_service import create_training_job
     asset = asset.upper()
     model_key = (payload.model_key if payload else "nhits").lower()
-    if model_key not in ("nhits", "tft"):
-        raise HTTPException(status_code=400, detail="model_key must be nhits or tft")
+    if model_key not in ("nhits", "tft", "lightgbm"):
+        raise HTTPException(status_code=400, detail="model_key must be nhits, tft, or lightgbm")
 
-    supported_assets = NHITS_FEATURED if model_key == "nhits" else TFT_FEATURED
-    if asset not in supported_assets:
-        raise HTTPException(status_code=400, detail=f"Supported assets: {sorted(supported_assets)}")
+    if model_key in ("nhits", "tft"):
+        supported_assets = NHITS_FEATURED if model_key == "nhits" else TFT_FEATURED
+        if asset not in supported_assets:
+            raise HTTPException(status_code=400, detail=f"Supported assets: {sorted(supported_assets)}")
 
     period = payload.period if payload else "2y"
     epochs = payload.epochs if payload and payload.epochs else None
 
-    logger.info(f"Admin triggered {model_key} training for {asset}")
-    from app.services.prediction_service import train_model
-
-    result = await train_model(asset, period=period, epochs=epochs, model_key=model_key)
-
+    logger.info(f"Admin queued {model_key} training for {asset}")
+    job = create_training_job(asset=asset, model_key=model_key, period=period, epochs=epochs)
     return TrainModelResponse(
         asset=asset,
-        status=result.get("status", "unknown"),
-        message=result.get("message", ""),
-        training_samples=result.get("training_samples"),
-        val_loss=result.get("val_loss"),
-        model_version=result.get("model_version"),
+        model_key=model_key,
+        job_id=job["job_id"],
+        status=job["status"],
+        message=job["message"],
     )
+
+
+@router.get("/training-jobs", response_model=list[TrainingJobResponse])
+def list_training_job_status(
+    asset: str | None = None,
+    model_key: str | None = None,
+    _: User = Depends(get_current_admin),
+):
+    from app.services.training_job_service import list_training_jobs
+
+    return list_training_jobs(asset=asset, model_key=model_key)
+
+
+@router.get("/training-jobs/{job_id}", response_model=TrainingJobResponse)
+def get_training_job_status(
+    job_id: str,
+    _: User = Depends(get_current_admin),
+):
+    from app.services.training_job_service import get_training_job
+
+    job = get_training_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Training job not found.")
+    return job
 
 
 @router.get("/model-status")
@@ -177,9 +198,11 @@ def model_status(_: User = Depends(get_current_admin)):
     """Report training status for each asset model."""
     from app.ml.nhits_model import get_model as get_nhits_model
     from app.ml.tft_model import get_model as get_tft_model
-    from app.services.asset_registry import NHITS_FEATURED, TFT_FEATURED
+    from app.services.asset_registry import ALL_ASSETS, NHITS_FEATURED, TFT_FEATURED
+    from app.services.model_output_service import get_model_disk_status
+    from app.services.training_job_service import list_training_jobs
 
-    status_report = {asset: {} for asset in sorted(NHITS_FEATURED | TFT_FEATURED)}
+    status_report = {asset: {} for asset in sorted(ALL_ASSETS)}
 
     for asset in sorted(NHITS_FEATURED):
         model = get_nhits_model(asset)
@@ -208,7 +231,52 @@ def model_status(_: User = Depends(get_current_admin)):
                 "dropout": model.dropout,
             },
         }
-    return status_report
+    for asset in sorted(ALL_ASSETS):
+        lgbm_status = get_model_disk_status(asset, "lightgbm")
+        status_report[asset] = {
+            **status_report.get(asset, {}),
+            "lightgbm": {
+                "is_trained": lgbm_status["trained"],
+                "version": lgbm_status["version"],
+            },
+        }
+    return {
+        "models": status_report,
+        "training_jobs": list_training_jobs()[:25],
+    }
+
+
+@router.get("/model-health")
+def model_health(
+    asset: str | None = None,
+    source: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    from app.services.model_health_service import latest_model_health
+
+    rows = latest_model_health(db, asset=asset, source=source)
+    return [
+        {
+            "asset": row.asset,
+            "model_key": row.model_key,
+            "model_version": row.model_version,
+            "period": row.period,
+            "source": row.source,
+            "mae": row.mae,
+            "rmse": row.rmse,
+            "mape": row.mape,
+            "directional_accuracy": row.directional_accuracy,
+            "sharpe_ratio": row.sharpe_ratio,
+            "annualised_return": row.annualised_return,
+            "max_drawdown": row.max_drawdown,
+            "total_predictions": row.total_predictions,
+            "correct_directions": row.correct_directions,
+            "notes": row.notes,
+            "computed_at": row.computed_at,
+        }
+        for row in rows
+    ]
 
 
 # ─────────────────────────────────────────────────────────────

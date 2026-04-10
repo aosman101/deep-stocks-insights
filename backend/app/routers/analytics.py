@@ -49,6 +49,7 @@ async def estimated_prediction(
         from app.services.indicators_service import compute_indicators
         from app.services.prediction_service import run_analytics_prediction
         from app.services.risk_service import attach_risk_to_prediction
+        from app.services.prediction_record_service import persist_analytics_response
 
         result = await run_analytics_prediction(asset)
         if "error" in result:
@@ -64,26 +65,12 @@ async def estimated_prediction(
         atr = indicators.get("atr_14")
         attach_risk_to_prediction(result, atr)
 
-        # Persist
-        pred_row = Prediction(
-            asset=asset,
-            prediction_type="estimated",
-            predicted_close=result["ensemble_forecast"],
-            predicted_change_pct=result["ensemble_change_pct"],
-            confidence=result["ensemble_confidence"],
-            current_price=result["current_price"],
-            prediction_horizon="5d",
-            signal=result["ensemble_signal"],
-            stop_loss=result.get("stop_loss"),
-            take_profit=result.get("take_profit"),
-            notes="Ensemble statistical estimate (SMA + EMA + LoBF + Holt's).",
-            created_by_user_id=current_user.id,
+        return persist_analytics_response(
+            db,
+            result,
+            user_id=current_user.id,
+            trigger_source="manual",
         )
-        db.add(pred_row)
-        db.commit()
-        result["id"] = pred_row.id
-
-        return result
 
     except HTTPException:
         raise
@@ -164,7 +151,7 @@ async def compare_methods(
 ):
     """
     Side-by-side comparison:
-      - Latest stored N-HiTS actual prediction
+      - Latest stored actual predictions by model
       - Latest statistical estimate
       - Current technical indicator signal
     """
@@ -173,12 +160,20 @@ async def compare_methods(
         from app.services.market_service import get_historical_data
         from app.services.indicators_service import compute_indicators
 
-        # Latest N-HiTS prediction from DB
-        lstm_pred = (
+        actual_predictions = (
             db.query(Prediction)
             .filter(Prediction.asset == asset, Prediction.prediction_type == "actual")
             .order_by(Prediction.created_at.desc())
-            .first()
+            .all()
+        )
+        latest_by_model = {}
+        for row in actual_predictions:
+            latest_by_model.setdefault(row.model_key or "nhits", row)
+        primary_actual = (
+            latest_by_model.get("ensemble")
+            or latest_by_model.get("nhits")
+            or latest_by_model.get("tft")
+            or latest_by_model.get("lightgbm")
         )
 
         # Latest estimated prediction from DB
@@ -196,11 +191,23 @@ async def compare_methods(
         return {
             "asset": asset,
             "lstm_prediction": {
-                "predicted_close": lstm_pred.predicted_close if lstm_pred else None,
-                "signal": lstm_pred.signal if lstm_pred else None,
-                "confidence": lstm_pred.confidence if lstm_pred else None,
-                "created_at": lstm_pred.created_at if lstm_pred else None,
-            } if lstm_pred else None,
+                "predicted_close": primary_actual.predicted_close if primary_actual else None,
+                "signal": primary_actual.signal if primary_actual else None,
+                "confidence": primary_actual.confidence if primary_actual else None,
+                "created_at": primary_actual.created_at if primary_actual else None,
+                "model_key": primary_actual.model_key if primary_actual else None,
+            } if primary_actual else None,
+            "actual_predictions": {
+                key: {
+                    "predicted_close": row.predicted_close,
+                    "signal": row.signal,
+                    "confidence": row.confidence,
+                    "prediction_horizon": row.prediction_horizon,
+                    "created_at": row.created_at,
+                    "run_id": row.run_id,
+                }
+                for key, row in latest_by_model.items()
+            },
             "statistical_estimate": {
                 "predicted_close": est_pred.predicted_close if est_pred else None,
                 "signal": est_pred.signal if est_pred else None,
@@ -245,9 +252,12 @@ async def walk_forward_accuracy(
             raise HTTPException(status_code=404, detail="Insufficient data for accuracy analysis")
 
         from app.services.model_evaluation_service import evaluate_model_stack
+        from app.services.model_health_service import persist_walk_forward_metrics
 
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, lambda: evaluate_model_stack(df, asset, period))
+        payload = await loop.run_in_executor(None, lambda: evaluate_model_stack(df, asset, period))
+        persist_walk_forward_metrics(db, asset, period, payload)
+        return payload
     except HTTPException:
         raise
     except Exception as e:

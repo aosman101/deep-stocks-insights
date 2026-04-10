@@ -18,11 +18,12 @@ from app.models.agent import (
     AgentStatus, TradeSide, TradeStatus,
 )
 from app.services.market_service import get_live_quote
-from app.services.risk_service import compute_risk_levels
+from app.services.prediction_record_service import latest_prediction_snapshot
 
 logger = logging.getLogger(__name__)
 
 SIGNAL_THRESHOLD = 0.4  # minimum signal strength to act
+AGENT_MAX_PREDICTION_AGE_HOURS = 48
 
 
 async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
@@ -152,16 +153,20 @@ def _close_trade(
 async def _evaluate_and_open(
     session: AgentSession, asset: str, db: Session
 ) -> Optional[AgentTrade]:
-    """Evaluate signals and open a new trade if criteria met."""
+    """Evaluate stored predictions and open a new trade if criteria met."""
     quote = await get_live_quote(asset)
     current_price = quote.get("price", 0)
     if not current_price:
         return None
 
-    # Get prediction signal
-    try:
-        prediction = await get_prediction(asset, horizon="1d")
-    except Exception:
+    prediction = latest_prediction_snapshot(
+        db,
+        asset,
+        horizon="1d",
+        max_age_hours=AGENT_MAX_PREDICTION_AGE_HOURS,
+    )
+    if prediction is None:
+        logger.info(f"Agent skipped {asset}: no recent stored prediction was available")
         return None
 
     signal = prediction.get("signal")
@@ -202,6 +207,7 @@ async def _evaluate_and_open(
 
     trade = AgentTrade(
         session_id=session.id,
+        prediction_id=prediction.get("id"),
         asset=asset,
         side=side,
         quantity=round(quantity, 6),
@@ -211,13 +217,22 @@ async def _evaluate_and_open(
         signal=signal,
         signal_strength=strength,
         confidence=confidence,
-        prediction_horizon="1d",
+        prediction_horizon=prediction.get("prediction_horizon") or "1d",
+        prediction_run_id=prediction.get("run_id"),
+        model_key_used=prediction.get("model_key"),
+        model_version_used=prediction.get("model_version"),
+        decision_source="prediction_record",
+        decision_notes=(
+            f"Opened from stored {prediction.get('model_key')} prediction "
+            f"run={prediction.get('run_id')} trigger={prediction.get('trigger_source')}"
+        ),
     )
     db.add(trade)
 
     logger.info(
         f"Agent opened {side} {asset}: price={current_price:.2f} "
-        f"qty={quantity:.6f} sl={stop_loss:.2f} tp={take_profit:.2f}"
+        f"qty={quantity:.6f} sl={stop_loss:.2f} tp={take_profit:.2f} "
+        f"prediction_id={prediction.get('id')} model={prediction.get('model_key')}"
     )
     return trade
 
@@ -249,16 +264,6 @@ def _take_snapshot(session: AgentSession, db: Session):
         win_rate=win_rate,
     )
     db.add(snapshot)
-
-
-async def get_prediction(asset: str, horizon: str = "1d") -> Dict:
-    """Wrapper to get prediction from the prediction service."""
-    from app.services.prediction_service import run_sequence_prediction
-    try:
-        return await run_sequence_prediction(asset, horizon=horizon)
-    except Exception as e:
-        logger.warning(f"Agent prediction failed for {asset}: {e}")
-        return {}
 
 
 def close_trade_manual(trade_id: int, db: Session) -> Optional[AgentTrade]:

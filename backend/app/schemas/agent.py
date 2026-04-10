@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CreateSessionRequest(BaseModel):
@@ -24,6 +24,7 @@ class UpdateSessionRequest(BaseModel):
 
 
 class SessionResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
     id: int
     name: str
     user_id: int
@@ -39,11 +40,8 @@ class SessionResponse(BaseModel):
     updated_at: Optional[datetime]
     stopped_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
-
-
 class TradeResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
     id: int
     session_id: int
     prediction_id: Optional[int]
@@ -70,15 +68,12 @@ class TradeResponse(BaseModel):
     opened_at: Optional[datetime]
     closed_at: Optional[datetime]
 
-    class Config:
-        from_attributes = True
-
-
 class CloseTradeRequest(BaseModel):
     exit_price: float = Field(..., gt=0)
 
 
 class SnapshotResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
     id: int
     session_id: int
     total_value: float
@@ -89,11 +84,8 @@ class SnapshotResponse(BaseModel):
     win_rate: Optional[float]
     timestamp: Optional[datetime]
 
-    class Config:
-        from_attributes = True
-
-
 class SessionStatsResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     total_trades: int
     open_trades: int
     winners: int
@@ -105,6 +97,7 @@ class SessionStatsResponse(BaseModel):
 
 
 class CycleResultResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
     closed: list
     opened: list
     held: list
