@@ -9,23 +9,34 @@ import {
   BookOpen,
   ShieldCheck,
   LogOut,
-  Cpu,
   User,
   X,
   Bot,
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/',              label: 'Home',           icon: Home },
-  { to: '/predict',       label: 'Predict',        icon: TrendingUp },
-  { to: '/graph-analysis',label: 'Graph Analysis', icon: LineChart },
-  { to: '/comparison',    label: 'Comparison',     icon: GitCompare },
-  { to: '/ai-insights',   label: 'AI Insights',    icon: Sparkles },
-  { to: '/agent',         label: 'Agent Dashboard', icon: Bot },
-  { to: '/learn',         label: 'Learn & Markets', icon: BookOpen },
+  { to: '/',              label: 'Home',            icon: Home,        section: '§01' },
+  { to: '/predict',       label: 'Predict',         icon: TrendingUp,  section: '§02' },
+  { to: '/graph-analysis',label: 'Graph Analysis',  icon: LineChart,   section: '§03' },
+  { to: '/comparison',    label: 'Comparison',      icon: GitCompare,  section: '§04' },
+  { to: '/ai-insights',   label: 'AI Insights',     icon: Sparkles,    section: '§05' },
+  { to: '/agent',         label: 'Agent Desk',      icon: Bot,         section: '§06' },
+  { to: '/learn',         label: 'Learn & Markets', icon: BookOpen,    section: '§07' },
 ]
 
-const ADMIN_ITEM = { to: '/admin', label: 'Admin', icon: ShieldCheck }
+const ADMIN_ITEM = { to: '/admin', label: 'Admin', icon: ShieldCheck, section: '§⚡' }
+
+function SectionMark({ mark, isActive }) {
+  return (
+    <span
+      className={`font-mono text-[9px] tracking-[0.15em] w-7 flex-shrink-0 ${
+        isActive ? 'text-ember-500' : 'text-parchment-faint'
+      }`}
+    >
+      {mark}
+    </span>
+  )
+}
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth()
@@ -37,7 +48,6 @@ export default function Sidebar({ open, onClose }) {
   }
 
   const handleNav = () => {
-    // Close on mobile after navigating
     if (onClose) onClose()
   }
 
@@ -46,100 +56,135 @@ export default function Sidebar({ open, onClose }) {
       {/* Mobile backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-black/60 lg:hidden"
+          className="fixed inset-0 z-40 bg-surface/80 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-56 bg-surface-card border-r border-surface-border flex flex-col
-        transform transition-transform duration-200 ease-in-out
+        fixed inset-y-0 left-0 z-50 w-64 bg-surface-card/85 backdrop-blur-md
+        border-r border-surface-border flex flex-col
+        transform transition-transform duration-300 ease-out
         lg:relative lg:translate-x-0 lg:z-auto
         ${open ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Logo + mobile close */}
-        <div className="flex items-center justify-between px-5 py-5 border-b border-surface-border">
-          <div className="flex items-center gap-2">
-            <Cpu className="w-6 h-6 text-accent-blue" />
-            <span className="font-bold text-white tracking-tight leading-tight text-sm">
-              Deep Stock<br />
-              <span className="text-accent-blue">Insights</span>
+        {/* Masthead */}
+        <div className="relative px-6 pt-7 pb-6 border-b border-surface-border">
+          <button
+            onClick={onClose}
+            className="absolute right-4 top-4 lg:hidden p-1 text-parchment-muted hover:text-parchment"
+          >
+            <X className="w-4 h-4" />
+          </button>
+
+          <div className="eyebrow mb-2">MMXXVI · Vol. I</div>
+          <div
+            className="font-display font-light text-[26px] leading-[0.95] text-parchment tracking-tight"
+            style={{ fontVariationSettings: '"opsz" 144, "SOFT" 40' }}
+          >
+            Deep Stock
+            <br />
+            <span className="italic text-ember-500" style={{ fontVariationSettings: '"opsz" 144, "SOFT" 100' }}>
+              Insights
             </span>
           </div>
-          <button onClick={onClose} className="lg:hidden p-1 rounded text-gray-400 hover:text-white">
-            <X className="w-5 h-5" />
-          </button>
+          <div className="mt-3 flex items-center gap-2">
+            <div className="h-1 w-1 rounded-full bg-bull animate-pulse" />
+            <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-parchment-muted">
+              Terminal Online
+            </div>
+          </div>
         </div>
 
-        {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
+          <div className="eyebrow px-3 pb-3">── The Desk</div>
+          {NAV_ITEMS.map(({ to, label, icon: Icon, section }) => (
             <NavLink
               key={to}
               to={to}
               end={to === '/'}
               onClick={handleNav}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                `group relative flex items-center gap-3 px-3 py-2.5 text-[13px] transition-all duration-200 ${
                   isActive
-                    ? 'bg-accent-blue/20 text-accent-blue'
-                    : 'text-gray-400 hover:bg-surface-hover hover:text-white'
+                    ? 'text-parchment bg-ember-500/5 border-l-2 border-ember-500 pl-[10px]'
+                    : 'text-parchment-dim border-l-2 border-transparent hover:text-parchment hover:bg-surface-hover/50 hover:border-surface-ring pl-[10px]'
                 }`
               }
             >
-              <Icon className="w-4 h-4 flex-shrink-0" />
-              {label}
+              {({ isActive }) => (
+                <>
+                  <SectionMark mark={section} isActive={isActive} />
+                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${
+                    isActive ? 'text-ember-500' : 'text-parchment-muted group-hover:text-parchment-dim'
+                  }`} />
+                  <span className="font-medium tracking-tight flex-1">{label}</span>
+                  {isActive && <span className="font-mono text-[9px] text-ember-500">●</span>}
+                </>
+              )}
             </NavLink>
           ))}
 
           {user?.role === 'admin' && (
-            <NavLink
-              to={ADMIN_ITEM.to}
-              onClick={handleNav}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive
-                    ? 'bg-yellow-500/20 text-yellow-400'
-                    : 'text-gray-400 hover:bg-surface-hover hover:text-white'
-                }`
-              }
-            >
-              <ADMIN_ITEM.icon className="w-4 h-4 flex-shrink-0" />
-              {ADMIN_ITEM.label}
-            </NavLink>
+            <>
+              <div className="eyebrow px-3 pb-3 pt-6">── Restricted</div>
+              <NavLink
+                to={ADMIN_ITEM.to}
+                onClick={handleNav}
+                className={({ isActive }) =>
+                  `group relative flex items-center gap-3 px-3 py-2.5 text-[13px] transition-all duration-200 ${
+                    isActive
+                      ? 'text-parchment bg-ember-600/5 border-l-2 border-ember-600 pl-[10px]'
+                      : 'text-parchment-dim border-l-2 border-transparent hover:text-parchment hover:bg-surface-hover/50 hover:border-surface-ring pl-[10px]'
+                  }`
+                }
+              >
+                {({ isActive }) => (
+                  <>
+                    <SectionMark mark={ADMIN_ITEM.section} isActive={isActive} />
+                    <ADMIN_ITEM.icon className={`w-3.5 h-3.5 flex-shrink-0 ${
+                      isActive ? 'text-ember-600' : 'text-parchment-muted'
+                    }`} />
+                    <span className="font-medium tracking-tight flex-1">{ADMIN_ITEM.label}</span>
+                  </>
+                )}
+              </NavLink>
+            </>
           )}
         </nav>
 
-        {/* User + logout */}
-        <div className="px-3 py-4 border-t border-surface-border space-y-1">
+        {/* User block */}
+        <div className="border-t border-surface-border p-4 space-y-3">
           <NavLink
             to="/profile"
             onClick={handleNav}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isActive
-                  ? 'bg-accent-blue/20 text-accent-blue'
-                  : 'text-gray-400 hover:bg-surface-hover hover:text-white'
-              }`
-            }
+            className="flex items-center gap-3 group"
           >
-            <User className="w-4 h-4 flex-shrink-0" />
-            Profile
+            <div className="relative flex h-9 w-9 items-center justify-center border border-surface-ring bg-surface">
+              <User className="w-4 h-4 text-parchment-dim group-hover:text-ember-500 transition-colors" />
+              <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-bull ring-2 ring-surface-card" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="eyebrow">Signed in as</div>
+              <div className="text-[13px] font-medium text-parchment truncate group-hover:text-ember-500 transition-colors">
+                {user?.username}
+              </div>
+              {user?.role === 'admin' && (
+                <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-ember-500 mt-0.5">
+                  ★ Editor-in-Chief
+                </div>
+              )}
+            </div>
           </NavLink>
-          <div className="px-3 py-2">
-            <p className="text-xs text-gray-500">Signed in as</p>
-            <p className="text-sm text-white font-medium truncate">{user?.username}</p>
-            {user?.role === 'admin' && (
-              <span className="text-xs text-yellow-400 font-medium">Admin</span>
-            )}
-          </div>
+
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-400 hover:bg-surface-hover hover:text-red-400 transition-colors"
+            className="w-full flex items-center gap-2 px-3 py-2 border border-surface-border text-[11px] font-mono uppercase tracking-[0.15em] text-parchment-muted hover:text-bear hover:border-bear/50 hover:bg-bear/5 transition-all"
           >
-            <LogOut className="w-4 h-4 flex-shrink-0" />
-            Log out
+            <LogOut className="w-3 h-3" />
+            Close Terminal
           </button>
         </div>
       </aside>

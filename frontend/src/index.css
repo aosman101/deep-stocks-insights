@@ -2,66 +2,338 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ──────────────────────────────────────────────────────────────
+   Editorial Terminal — Deep Stock Insights
+   Warm obsidian dark · parchment ink · burnt amber accent
+   ────────────────────────────────────────────────────────────── */
+
 @layer base {
+  :root {
+    --ink:        #f5eeda;
+    --ink-dim:    #c9c0a8;
+    --ink-muted:  #8c8373;
+    --ink-faint:  #57503f;
+    --bg:         #0b0a08;
+    --bg-card:    #14110d;
+    --bg-hover:   #1c1913;
+    --border:     #2a241c;
+    --border-lit: #3a3226;
+    --ember:      #f5a524;
+    --ember-hot:  #ea580c;
+    --bull:       #a3e635;
+    --bear:       #f87171;
+  }
+
   * { box-sizing: border-box; }
-  body { @apply bg-surface text-white; }
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { @apply bg-surface; }
-  ::-webkit-scrollbar-thumb { @apply bg-surface-border rounded-full; }
+
+  html {
+    font-feature-settings: "ss01", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-surface text-parchment font-sans;
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(ellipse 90% 60% at 15% -10%, rgba(245, 165, 36, 0.10), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 90% 110%, rgba(234, 88, 12, 0.06), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(20, 17, 13, 0.4), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  /* Selection */
+  ::selection { background: rgba(245, 165, 36, 0.35); color: var(--ink); }
+
+  /* Refined scrollbar — bronze on obsidian */
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(138, 116, 83, 0.25);
+    border-radius: 0;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(245, 165, 36, 0.45); background-clip: padding-box; }
+
+  /* Numeric tabular feel everywhere */
+  .font-mono, code, kbd, samp { font-variant-numeric: tabular-nums; }
+
+  /* Fraunces headline tuning — pull optical size larger */
+  .font-display {
+    font-variation-settings: "opsz" 144, "SOFT" 30;
+  }
+
+  h1, h2, h3, h4 { letter-spacing: -0.015em; }
 }
+
+/* ──────────────────────────────────────────────────────────────
+   Component layer — legacy class names kept, restyled
+   ────────────────────────────────────────────────────────────── */
 
 @layer components {
+
+  /* Editorial display type */
+  .headline {
+    @apply font-display font-light text-parchment;
+    font-variation-settings: "opsz" 144, "SOFT" 50;
+  }
+  .headline-italic {
+    @apply font-display italic text-parchment;
+    font-variation-settings: "opsz" 144, "SOFT" 80;
+  }
+
+  .eyebrow {
+    @apply font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-muted;
+  }
+
+  .rule {
+    @apply h-px w-full bg-gradient-to-r from-transparent via-surface-border to-transparent;
+  }
+
+  /* Card — layered parchment-on-obsidian feel */
   .card {
-    @apply bg-surface-card border border-surface-border rounded-xl p-5;
+    @apply relative bg-surface-card/80 backdrop-blur-sm rounded-none p-5
+           border border-surface-border text-parchment;
+    box-shadow:
+      inset 0 1px 0 0 rgba(245, 238, 218, 0.04),
+      0 10px 40px -20px rgba(0, 0, 0, 0.8);
   }
+  .card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.2' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.93 0 0 0 0 0.85 0 0 0 0.035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    mix-blend-mode: overlay;
+    opacity: 0.6;
+  }
+  .card > * { position: relative; }
+
   .card-hover {
-    @apply card transition-all duration-200 hover:border-accent-blue/40 hover:bg-surface-hover;
+    @apply card transition-all duration-300 ease-out;
   }
+  .card-hover:hover {
+    @apply border-ember-500/40;
+    box-shadow:
+      inset 0 1px 0 0 rgba(245, 238, 218, 0.08),
+      0 0 0 1px rgba(245, 165, 36, 0.15),
+      0 20px 60px -25px rgba(245, 165, 36, 0.25),
+      0 30px 80px -30px rgba(0, 0, 0, 0.9);
+    transform: translateY(-2px);
+  }
+
+  /* Buttons — sharp editorial buttons */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2
-           font-medium text-sm transition-all duration-150 focus:outline-none
-           focus:ring-2 focus:ring-offset-2 focus:ring-offset-surface disabled:opacity-50
-           disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-none px-4 py-2.5
+           text-[13px] font-medium tracking-wide transition-all duration-200
+           focus:outline-none focus:ring-2 focus:ring-offset-2
+           focus:ring-offset-surface disabled:opacity-40 disabled:cursor-not-allowed;
+    font-feature-settings: "ss01";
   }
   .btn-primary {
-    @apply btn bg-accent-blue text-white hover:bg-blue-500 focus:ring-accent-blue;
+    @apply btn text-surface bg-ember-500 border border-ember-500
+           hover:bg-ember-400 hover:border-ember-400
+           focus:ring-ember-500 relative overflow-hidden;
+    box-shadow:
+      0 0 0 1px rgba(245, 165, 36, 0.3),
+      0 10px 30px -10px rgba(245, 165, 36, 0.55);
   }
+  .btn-primary::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.25), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.6s;
+  }
+  .btn-primary:hover::after { transform: translateX(100%); }
+
   .btn-ghost {
-    @apply btn text-slate-300 hover:bg-surface-hover hover:text-white focus:ring-surface-border;
+    @apply btn bg-transparent text-parchment-dim border border-surface-border
+           hover:bg-surface-hover hover:border-surface-ring hover:text-parchment
+           focus:ring-surface-border;
+  }
+  .btn-outline {
+    @apply btn bg-transparent text-ember-500 border border-ember-500/60
+           hover:bg-ember-500/10 hover:border-ember-500
+           focus:ring-ember-500;
   }
   .btn-danger {
-    @apply btn bg-accent-red text-white hover:bg-red-500 focus:ring-accent-red;
+    @apply btn bg-bear text-surface border border-bear
+           hover:bg-red-400 focus:ring-bear;
   }
+
+  /* Inputs — terminal field style */
   .input {
-    @apply w-full bg-surface border border-surface-border rounded-lg px-3 py-2
-           text-sm text-white placeholder-slate-500
-           focus:outline-none focus:ring-2 focus:ring-accent-blue focus:border-transparent
+    @apply w-full bg-surface-card border border-surface-border rounded-none px-3.5 py-2.5
+           text-sm text-parchment placeholder-parchment-faint font-mono
+           focus:outline-none focus:border-ember-500/70
+           focus:shadow-[0_0_0_3px_rgba(245,165,36,0.12)]
            transition-all duration-150;
   }
+  .input:focus { background-color: var(--bg); }
+
+  /* Badges — flatter editorial chips */
   .badge {
-    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-semibold;
+    @apply inline-flex items-center gap-1 rounded-none px-2 py-0.5
+           text-[10px] font-mono font-semibold uppercase tracking-[0.1em]
+           border;
   }
-  .badge-buy   { @apply badge bg-accent-green/20 text-accent-green; }
-  .badge-sell  { @apply badge bg-accent-red/20 text-accent-red; }
-  .badge-hold  { @apply badge bg-accent-amber/20 text-accent-amber; }
-  .badge-bull  { @apply badge bg-accent-green/20 text-accent-green; }
-  .badge-bear  { @apply badge bg-accent-red/20 text-accent-red; }
-  .badge-neu   { @apply badge bg-slate-500/20 text-slate-400; }
-  .stat-up   { @apply text-accent-green; }
-  .stat-down { @apply text-accent-red; }
+  .badge-buy   { @apply badge bg-bull/10  text-bull  border-bull/30; }
+  .badge-sell  { @apply badge bg-bear/10  text-bear  border-bear/30; }
+  .badge-hold  { @apply badge bg-ember-500/10 text-ember-500 border-ember-500/30; }
+  .badge-bull  { @apply badge bg-bull/10  text-bull  border-bull/30; }
+  .badge-bear  { @apply badge bg-bear/10  text-bear  border-bear/30; }
+  .badge-neu   { @apply badge bg-parchment-muted/10 text-parchment-muted border-parchment-muted/30; }
+
+  .stat-up   { @apply text-bull; }
+  .stat-down { @apply text-bear; }
+
   .section-title {
-    @apply text-lg font-semibold text-white mb-4;
+    @apply font-display text-2xl text-parchment mb-4 font-light tracking-headline;
   }
-  .label { @apply text-xs font-medium text-slate-400 uppercase tracking-wider; }
+
+  .label {
+    @apply font-mono text-[10px] uppercase tracking-[0.2em] text-parchment-muted;
+  }
+
+  /* Grain overlay — fixed noise texture */
+  .grain-overlay {
+    pointer-events: none;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.93 0 0 0 0 0.85 0 0 0 0.045 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    mix-blend-mode: overlay;
+    opacity: 0.85;
+  }
+
+  /* Scan-line texture for terminal panels */
+  .scanlines {
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 2px,
+      rgba(245, 238, 218, 0.018) 2px,
+      rgba(245, 238, 218, 0.018) 3px
+    );
+  }
+
+  /* Hairline divider used inside cards */
+  .hairline {
+    border-color: var(--border);
+  }
+
+  /* Marquee strip (ticker tape) */
+  .marquee {
+    @apply overflow-hidden relative;
+    mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 8%, black 92%, transparent);
+  }
+  .marquee-track {
+    display: inline-flex;
+    gap: 3rem;
+    white-space: nowrap;
+    padding-right: 3rem;
+    will-change: transform;
+  }
+
+  /* Blinking terminal caret */
+  .caret::after {
+    content: '▊';
+    margin-left: 0.15em;
+    color: var(--ember);
+    animation: blink 1.2s steps(2, start) infinite;
+  }
+
+  /* Ember underline accent for links */
+  .link-underline {
+    position: relative; color: var(--ink);
+  }
+  .link-underline::after {
+    content: '';
+    position: absolute; left: 0; bottom: -2px;
+    width: 100%; height: 1px;
+    background: var(--ember);
+    transform-origin: right;
+    transform: scaleX(0);
+    transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  .link-underline:hover::after {
+    transform-origin: left;
+    transform: scaleX(1);
+  }
+
+  /* Numeric ticker cell */
+  .num {
+    @apply font-mono tabular-nums text-parchment;
+    font-feature-settings: "tnum", "ss01";
+  }
+
+  /* Corner marks — editorial frame corners for cards */
+  .corners {
+    position: relative;
+  }
+  .corners::before,
+  .corners::after {
+    content: '';
+    position: absolute;
+    width: 10px; height: 10px;
+    border-color: var(--ember);
+    pointer-events: none;
+  }
+  .corners::before {
+    top: -1px; left: -1px;
+    border-top: 1px solid var(--ember);
+    border-left: 1px solid var(--ember);
+  }
+  .corners::after {
+    bottom: -1px; right: -1px;
+    border-bottom: 1px solid var(--ember);
+    border-right: 1px solid var(--ember);
+  }
 }
 
-/* Recharts overrides for dark mode */
+/* ──────────────────────────────────────────────────────────────
+   Recharts overrides — align to editorial palette
+   ────────────────────────────────────────────────────────────── */
+
 .recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line { stroke: #2a3347; }
+.recharts-cartesian-grid-vertical line { stroke: #2a241c; stroke-dasharray: 2 4; }
+.recharts-text { fill: #8c8373 !important; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 .recharts-tooltip-wrapper { outline: none !important; }
 .recharts-default-tooltip {
-  background: #161b27 !important;
-  border: 1px solid #2a3347 !important;
-  border-radius: 8px !important;
-  color: #fff !important;
+  background: rgba(11, 10, 8, 0.95) !important;
+  border: 1px solid #2a241c !important;
+  border-radius: 0 !important;
+  color: #f5eeda !important;
+  font-family: 'JetBrains Mono', monospace !important;
+  font-size: 11px !important;
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.9) !important;
+  backdrop-filter: blur(8px);
+}
+.recharts-default-tooltip .recharts-tooltip-label {
+  color: #f5a524 !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px !important;
+  margin-bottom: 4px !important;
+}
+.recharts-legend-item-text { color: #c9c0a8 !important; }
+
+/* Keep old accent-blue hex usage readable */
+.text-accent-blue { color: var(--ember) !important; }
+.text-accent-cyan { color: #d4a574 !important; }
+.text-accent-green { color: var(--bull) !important; }
+.text-accent-red { color: var(--bear) !important; }
+
+/* Accessibility: reduce motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
