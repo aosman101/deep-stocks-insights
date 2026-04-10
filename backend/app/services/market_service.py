@@ -392,6 +392,38 @@ async def get_historical_data(
     return df
 
 
+async def warm_market_data(
+    asset: str,
+    *,
+    periods: tuple[str, ...] = ("1y", "2y"),
+    interval: str = "1d",
+    include_live_quote: bool = True,
+) -> Dict:
+    """
+    Prime quote and historical caches for hot assets so the first foreground
+    request does not need to fetch everything itself.
+    """
+    asset = asset.upper()
+    payload = {"asset": asset, "quote_warmed": False, "history_periods": []}
+
+    if include_live_quote:
+        try:
+            await get_live_quote(asset)
+            payload["quote_warmed"] = True
+        except Exception as exc:
+            logger.warning(f"Quote warm-up failed for {asset}: {exc}")
+
+    for period in periods:
+        try:
+            df = await get_historical_data(asset, period=period, interval=interval)
+            if not df.empty:
+                payload["history_periods"].append(period)
+        except Exception as exc:
+            logger.warning(f"History warm-up failed for {asset} {period}: {exc}")
+
+    return payload
+
+
 # ─────────────────────────────────────────────────────────────
 #  DB cache helpers
 # ─────────────────────────────────────────────────────────────

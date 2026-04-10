@@ -13,8 +13,9 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import time
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, Iterable, Optional
 
 import numpy as np
 import pandas as pd
@@ -37,6 +38,10 @@ from app.services.risk_service import compute_risk_levels
 logger = logging.getLogger(__name__)
 
 _preprocessors: Dict[str, StockPreprocessor] = {}
+_sequence_input_cache: Dict[str, tuple[float, np.ndarray]] = {}
+_runtime_warm_cache: Dict[str, tuple[float, Dict]] = {}
+SEQUENCE_INPUT_CACHE_TTL_SECONDS = 900
+RUNTIME_WARM_CACHE_TTL_SECONDS = 1800
 
 ENSEMBLE_BASE_WEIGHTS = {
     "nhits": 1.15,
@@ -54,6 +59,44 @@ def get_preprocessor(asset: str) -> StockPreprocessor:
             proc.load(path)
         _preprocessors[asset] = proc
     return _preprocessors[asset]
+
+
+def _sequence_input_cache_key(asset: str, df: pd.DataFrame) -> Optional[str]:
+    if df.empty or "timestamp" not in df.columns:
+        return None
+    latest_ts = pd.to_datetime(df["timestamp"].iloc[-1]).strftime("%Y-%m-%dT%H:%M:%S")
+    return f"{asset.upper()}:{len(df)}:{latest_ts}"
+
+
+def _get_cached_sequence_inputs(cache_key: Optional[str]) -> Optional[np.ndarray]:
+    if not cache_key:
+        return None
+    entry = _sequence_input_cache.get(cache_key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    return None
+
+
+def _set_cached_sequence_inputs(cache_key: Optional[str], X: np.ndarray):
+    if not cache_key:
+        return
+    _sequence_input_cache[cache_key] = (time.monotonic() + SEQUENCE_INPUT_CACHE_TTL_SECONDS, X)
+
+
+def _warm_cache_key(asset: str, model_keys: Iterable[str]) -> str:
+    normalized = ",".join(sorted({model.lower() for model in model_keys}))
+    return f"{asset.upper()}:{normalized}"
+
+
+def _get_cached_warm_runtime(cache_key: str) -> Optional[Dict]:
+    entry = _runtime_warm_cache.get(cache_key)
+    if entry and entry[0] > time.monotonic():
+        return entry[1]
+    return None
+
+
+def _set_cached_warm_runtime(cache_key: str, payload: Dict):
+    _runtime_warm_cache[cache_key] = (time.monotonic() + RUNTIME_WARM_CACHE_TTL_SECONDS, payload)
 
 
 def generate_signal(
@@ -126,6 +169,58 @@ def _input_window_end(df: pd.DataFrame) -> Optional[datetime]:
     return value.replace(tzinfo=None) if value.tzinfo else value
 
 
+async def warm_prediction_runtime(asset: str, model_keys: Optional[Iterable[str]] = None) -> Dict:
+    """
+    Prime the hottest runtime dependencies for an asset so scheduled refreshes
+    and the first user request do not both pay the cold-start cost.
+    """
+    asset = asset.upper()
+    model_keys = [model.lower() for model in (model_keys or ("ensemble", "lightgbm", "analytics"))]
+    cache_key = _warm_cache_key(asset, model_keys)
+    cached = _get_cached_warm_runtime(cache_key)
+    if cached is not None:
+        return cached
+
+    payload = {
+        "asset": asset,
+        "history_cached": False,
+        "preprocessor_ready": False,
+        "sequence_models": {},
+        "lightgbm_ready": False,
+    }
+
+    df_2y = await get_historical_data(asset, period="2y")
+    await get_historical_data(asset, period="1y")
+    payload["history_cached"] = not df_2y.empty
+
+    if not df_2y.empty:
+        try:
+            proc = get_preprocessor(asset)
+            payload["preprocessor_ready"] = bool(proc.fitted)
+            for sequence_key in ("nhits", "tft"):
+                if sequence_key in model_keys and _supports_sequence_model(asset, sequence_key):
+                    _, model, _, error = await _ensure_sequence_model_ready(asset, sequence_key, df_2y)
+                    payload["sequence_models"][sequence_key] = {
+                        "ready": error is None and model is not None and model.is_trained,
+                        "version": getattr(model, "version", None) if model is not None else None,
+                        "error": error,
+                    }
+        except Exception as exc:
+            logger.warning(f"[{asset}] Runtime warm-up failed for sequence models: {exc}")
+
+        if "lightgbm" in model_keys or "ensemble" in model_keys:
+            try:
+                from app.services.lightgbm_service import get_lightgbm_model
+
+                model = get_lightgbm_model(asset, settings.MODEL_SAVE_PATH)
+                payload["lightgbm_ready"] = model is not None
+            except Exception as exc:
+                logger.warning(f"[{asset}] Runtime warm-up failed for LightGBM: {exc}")
+
+    _set_cached_warm_runtime(cache_key, payload)
+    return payload
+
+
 async def _ensure_sequence_model_ready(asset: str, model_key: str, df: pd.DataFrame):
     proc = get_preprocessor(asset)
     model = _get_sequence_model(asset, model_key, n_features=len(proc.feature_names))
@@ -139,11 +234,17 @@ async def _ensure_sequence_model_ready(asset: str, model_key: str, df: pd.DataFr
     if not proc.fitted:
         return None, None, None, f"Preprocessor for {asset} is not fitted."
 
+    cache_key = _sequence_input_cache_key(asset, df)
+    cached_X = _get_cached_sequence_inputs(cache_key)
+    if cached_X is not None:
+        return proc, model, cached_X, None
+
     try:
         X = proc.transform(df)
     except ValueError as exc:
         return None, None, None, str(exc)
 
+    _set_cached_sequence_inputs(cache_key, X)
     return proc, model, X, None
 
 
@@ -465,7 +566,7 @@ async def run_ensemble_prediction(
         candidate_payloads.append(await run_sequence_prediction(asset, horizon="1d", model_key="nhits", df=df))
     if has_tft(asset):
         candidate_payloads.append(await run_sequence_prediction(asset, horizon="1d", model_key="tft", df=df))
-    candidate_payloads.append(await run_lightgbm_model_prediction(asset, auto_train=True, df=df))
+    candidate_payloads.append(await run_lightgbm_model_prediction(asset, auto_train=False, df=df))
 
     usable = [payload for payload in candidate_payloads if payload.get("status") == "ok" and payload.get("prediction")]
     if not usable:

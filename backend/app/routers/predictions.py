@@ -12,6 +12,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.models.prediction import Prediction
 from app.core.dependencies import get_current_active_user
@@ -40,6 +41,84 @@ def _validate_asset(asset: str) -> str:
     if not asset:
         raise HTTPException(status_code=400, detail="Asset symbol is required")
     return asset
+
+
+def _prediction_item_from_row(row: Prediction) -> dict:
+    return {
+        "id": row.id,
+        "asset": row.asset,
+        "model_key": row.model_key,
+        "prediction_type": row.prediction_type,
+        "predicted_close": row.predicted_close,
+        "predicted_open": row.predicted_open,
+        "predicted_volume": row.predicted_volume,
+        "predicted_change_pct": row.predicted_change_pct,
+        "confidence": row.confidence,
+        "current_price": row.current_price,
+        "prediction_horizon": row.prediction_horizon,
+        "signal": row.signal,
+        "signal_strength": row.signal_strength,
+        "stop_loss": row.stop_loss,
+        "take_profit": row.take_profit,
+        "risk_reward_ratio": row.risk_reward_ratio,
+        "model_version": row.model_version,
+        "mae_at_time": row.mae_at_time,
+        "notes": row.notes,
+        "created_at": row.created_at,
+        "run_id": row.run_id,
+        "trigger_source": row.trigger_source,
+        "input_window_end": row.input_window_end,
+    }
+
+
+def _cached_response_from_rows(rows: list[Prediction]) -> dict:
+    if not rows:
+        raise ValueError("rows must not be empty")
+
+    horizon_rank = {"1d": 0, "3d": 1, "5d": 2, "7d": 3}
+    items = [_prediction_item_from_row(row) for row in rows]
+    items.sort(key=lambda item: horizon_rank.get(item.get("prediction_horizon"), 99))
+    primary = next((item for item in items if item.get("prediction_horizon") == "1d"), items[0])
+    source_row = rows[0]
+    return {
+        "asset": source_row.asset,
+        "model_key": source_row.model_key,
+        "model_version": source_row.model_version,
+        "prediction_type": source_row.prediction_type,
+        "status": "ok",
+        "current_price": primary.get("current_price"),
+        "prediction": primary,
+        "predictions": items,
+        "predicted_close": primary.get("predicted_close"),
+        "predicted_change_pct": primary.get("predicted_change_pct"),
+        "signal": primary.get("signal"),
+        "confidence": primary.get("confidence"),
+        "prediction_horizon": primary.get("prediction_horizon"),
+        "run_id": primary.get("run_id"),
+        "trigger_source": primary.get("trigger_source"),
+        "input_window_end": primary.get("input_window_end"),
+        "cache": {
+            "source": "stored_prediction",
+            "fresh": True,
+            "record_ids": [item["id"] for item in items],
+        },
+        "generated_at": source_row.created_at,
+    }
+
+
+def _pick_requested_prediction(payload: dict, horizon: str) -> dict:
+    predictions = payload.get("predictions") or []
+    if not predictions:
+        return payload
+    chosen = next((item for item in predictions if item.get("prediction_horizon") == horizon), predictions[0])
+    payload = dict(payload)
+    payload["prediction"] = chosen
+    payload["predicted_close"] = chosen.get("predicted_close")
+    payload["predicted_change_pct"] = chosen.get("predicted_change_pct")
+    payload["signal"] = chosen.get("signal")
+    payload["confidence"] = chosen.get("confidence")
+    payload["prediction_horizon"] = chosen.get("prediction_horizon")
+    return payload
 
 
 @router.get("/{asset}", response_model=dict)

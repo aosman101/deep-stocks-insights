@@ -143,6 +143,13 @@ class Settings(BaseSettings):
     MODEL_EVAL_RETRAIN_EVERY: int = 5
     MODEL_RETRAIN_ON_STARTUP: bool = False
     MODEL_SAVE_PATH: str = "./models"
+    INFERENCE_WORKER_COUNT: int = 1
+    INFERENCE_REQUEST_TIMEOUT_SECONDS: int = 45
+    PREDICTION_PRIORITY_ASSETS: str = "BTC,SOL,AAPL,GOLD"
+    PREDICTION_REFRESH_MINUTES: int = 15
+    PREDICTION_MAX_AGE_MINUTES: int = 30
+    ANALYTICS_MAX_AGE_MINUTES: int = 60
+    WALK_FORWARD_CACHE_TTL_SECONDS: int = 1800
 
     class Config:
         env_file = ".env"

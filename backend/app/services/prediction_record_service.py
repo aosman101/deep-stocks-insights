@@ -240,6 +240,62 @@ def latest_prediction_for_agent(
     return rows[0]
 
 
+def latest_prediction_row(
+    db: Session,
+    asset: str,
+    *,
+    model_key: Optional[str] = None,
+    prediction_type: Optional[str] = None,
+    horizon: Optional[str] = None,
+    max_age_minutes: Optional[int] = None,
+) -> Optional[Prediction]:
+    query = db.query(Prediction).filter(Prediction.asset == asset.upper())
+    if model_key:
+        query = query.filter(Prediction.model_key == model_key.lower())
+    if prediction_type:
+        query = query.filter(Prediction.prediction_type == prediction_type)
+    if horizon:
+        query = query.filter(Prediction.prediction_horizon == horizon)
+    if max_age_minutes is not None:
+        cutoff = datetime.utcnow() - timedelta(minutes=max_age_minutes)
+        query = query.filter(Prediction.created_at >= cutoff)
+    return query.order_by(Prediction.created_at.desc()).first()
+
+
+def latest_prediction_run(
+    db: Session,
+    asset: str,
+    *,
+    model_key: str,
+    prediction_type: str = "actual",
+    max_age_minutes: Optional[int] = None,
+) -> list[Prediction]:
+    latest = latest_prediction_row(
+        db,
+        asset,
+        model_key=model_key,
+        prediction_type=prediction_type,
+        max_age_minutes=max_age_minutes,
+    )
+    if latest is None:
+        return []
+
+    if not latest.run_id:
+        return [latest]
+
+    return (
+        db.query(Prediction)
+        .filter(
+            Prediction.asset == asset.upper(),
+            Prediction.model_key == model_key.lower(),
+            Prediction.prediction_type == prediction_type,
+            Prediction.run_id == latest.run_id,
+        )
+        .order_by(Prediction.created_at.desc(), Prediction.prediction_horizon.asc())
+        .all()
+    )
+
+
 def latest_prediction_snapshot(
     db: Session,
     asset: str,
