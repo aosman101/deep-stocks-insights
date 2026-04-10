@@ -19,6 +19,10 @@ class Prediction(Base):
     id = Column(Integer, primary_key=True, index=True)
     asset = Column(String(16), nullable=False, index=True)        # "BTC" | "GOLD"
     prediction_type = Column(String(16), nullable=False)           # "actual" | "estimated"
+    model_key = Column(String(32), nullable=False, default="nhits", index=True)
+    run_id = Column(String(64), nullable=True, index=True)
+    trigger_source = Column(String(32), nullable=True, default="manual")
+    input_window_end = Column(DateTime(timezone=True), nullable=True)
 
     # Prediction values
     predicted_close = Column(Float, nullable=False)
@@ -69,8 +73,11 @@ class ModelMetrics(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     asset = Column(String(16), nullable=False, index=True)
+    model_key = Column(String(32), nullable=False, default="nhits", index=True)
     model_version = Column(String(32), nullable=True)
     period = Column(String(16), default="30d")                    # evaluation window
+    source = Column(String(32), nullable=True, default="prediction_history")
+    notes = Column(Text, nullable=True)
 
     mae = Column(Float, nullable=True)
     rmse = Column(Float, nullable=True)

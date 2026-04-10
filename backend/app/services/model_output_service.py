@@ -12,12 +12,16 @@ MODEL_LABELS = {
     "nhits": "N-HiTS",
     "tft": "TFT",
     "lightgbm": "LightGBM",
+    "ensemble": "Ensemble",
+    "analytics": "Analytics",
 }
 
 MODEL_HORIZONS = {
     "nhits": ["1d", "3d", "7d"],
     "tft": ["1d", "3d", "7d"],
     "lightgbm": ["1d"],
+    "ensemble": ["1d"],
+    "analytics": ["5d"],
 }
 
 

@@ -46,6 +46,7 @@ class SessionResponse(BaseModel):
 class TradeResponse(BaseModel):
     id: int
     session_id: int
+    prediction_id: Optional[int]
     asset: str
     side: str
     quantity: float
@@ -57,6 +58,11 @@ class TradeResponse(BaseModel):
     signal_strength: Optional[float]
     confidence: Optional[float]
     prediction_horizon: Optional[str]
+    prediction_run_id: Optional[str]
+    model_key_used: Optional[str]
+    model_version_used: Optional[str]
+    decision_source: Optional[str]
+    decision_notes: Optional[str]
     status: str
     pnl: Optional[float]
     pnl_pct: Optional[float]

@@ -1,6 +1,6 @@
 """Schemas for prediction and analytics endpoints."""
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from datetime import datetime
 from typing import Optional, List
 
@@ -13,6 +13,10 @@ class PredictionResponse(PredictionSchema):
     id: Optional[int] = None
     asset: str
     prediction_type: str               # "actual" | "estimated"
+    model_key: Optional[str] = None
+    run_id: Optional[str] = None
+    trigger_source: Optional[str] = None
+    input_window_end: Optional[datetime] = None
 
     predicted_close: float
     predicted_open: Optional[float] = None
@@ -117,6 +121,29 @@ class TrainModelResponse(PredictionSchema):
     asset: str
     status: str
     message: str
+    job_id: Optional[str] = None
+    model_key: Optional[str] = None
     training_samples: Optional[int] = None
     val_loss: Optional[float] = None
+    model_version: Optional[str] = None
+
+
+class GeneratePredictionsRequest(PredictionSchema):
+    assets: List[str]
+    model_keys: List[str] = Field(default_factory=lambda: ["ensemble", "nhits", "tft", "lightgbm"])
+    include_analytics: bool = False
+    persist: bool = True
+
+
+class TrainingJobResponse(PredictionSchema):
+    job_id: str
+    asset: str
+    model_key: str
+    period: str
+    epochs: Optional[int] = None
+    status: str
+    message: Optional[str] = None
+    created_at: Optional[str] = None
+    started_at: Optional[str] = None
+    completed_at: Optional[str] = None
     model_version: Optional[str] = None

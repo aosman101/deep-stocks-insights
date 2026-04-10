@@ -31,11 +31,18 @@ from app.services.model_output_service import (
     build_workspace_response,
     get_model_label,
 )
+from app.services.prediction_record_service import new_prediction_run_id
 from app.services.risk_service import compute_risk_levels
 
 logger = logging.getLogger(__name__)
 
 _preprocessors: Dict[str, StockPreprocessor] = {}
+
+ENSEMBLE_BASE_WEIGHTS = {
+    "nhits": 1.15,
+    "tft": 1.0,
+    "lightgbm": 0.9,
+}
 
 
 def get_preprocessor(asset: str) -> StockPreprocessor:
@@ -110,6 +117,13 @@ def _build_risk(asset: str, current_price: float, signal: str, df: pd.DataFrame)
     atr = indicators.get("atr_14")
     levels = compute_risk_levels(asset, current_price, signal, atr)
     return build_risk_summary(levels)
+
+
+def _input_window_end(df: pd.DataFrame) -> Optional[datetime]:
+    if df.empty or "timestamp" not in df.columns:
+        return None
+    value = pd.to_datetime(df["timestamp"].iloc[-1]).to_pydatetime()
+    return value.replace(tzinfo=None) if value.tzinfo else value
 
 
 async def _ensure_sequence_model_ready(asset: str, model_key: str, df: pd.DataFrame):
@@ -262,7 +276,7 @@ async def run_sequence_prediction(
     )
 
     primary = predictions[0]
-    return build_model_response(
+    response = build_model_response(
         asset=asset,
         model_key=model_key,
         status="ok",
@@ -275,6 +289,9 @@ async def run_sequence_prediction(
         uncertainty=uncertainty,
         notes=primary.get("notes"),
     )
+    response["run_id"] = new_prediction_run_id(model_key)
+    response["input_window_end"] = _input_window_end(df)
+    return response
 
 
 async def run_multi_horizon_prediction(
@@ -338,7 +355,7 @@ async def run_multi_horizon_prediction(
     )
 
     primary = by_horizon["1d"]
-    return build_model_response(
+    response = build_model_response(
         asset=asset,
         model_key=model_key,
         status="ok",
@@ -351,6 +368,9 @@ async def run_multi_horizon_prediction(
         uncertainty=uncertainty,
         notes=primary.get("notes"),
     )
+    response["run_id"] = new_prediction_run_id(model_key)
+    response["input_window_end"] = _input_window_end(df)
+    return response
 
 
 async def run_lightgbm_model_prediction(
@@ -406,7 +426,7 @@ async def run_lightgbm_model_prediction(
     )
 
     risk = _build_risk(asset, current_price, prediction.get("signal", "HOLD"), df)
-    return build_model_response(
+    response = build_model_response(
         asset=asset,
         model_key="lightgbm",
         status="ok",
@@ -421,6 +441,120 @@ async def run_lightgbm_model_prediction(
         feature_importance=result.get("top_features"),
         notes=prediction.get("notes"),
     )
+    response["run_id"] = new_prediction_run_id("lightgbm")
+    response["input_window_end"] = _input_window_end(df)
+    return response
+
+
+async def run_ensemble_prediction(
+    asset: str,
+    df: Optional[pd.DataFrame] = None,
+) -> Dict:
+    asset = asset.upper()
+    df = df if df is not None else await get_historical_data(asset, period="2y")
+    if df.empty:
+        return build_model_response(
+            asset=asset,
+            model_key="ensemble",
+            status="error",
+            message=f"No data found for {asset}",
+        )
+
+    candidate_payloads: list[Dict] = []
+    if has_nhits(asset):
+        candidate_payloads.append(await run_sequence_prediction(asset, horizon="1d", model_key="nhits", df=df))
+    if has_tft(asset):
+        candidate_payloads.append(await run_sequence_prediction(asset, horizon="1d", model_key="tft", df=df))
+    candidate_payloads.append(await run_lightgbm_model_prediction(asset, auto_train=True, df=df))
+
+    usable = [payload for payload in candidate_payloads if payload.get("status") == "ok" and payload.get("prediction")]
+    if not usable:
+        return build_model_response(
+            asset=asset,
+            model_key="ensemble",
+            status="error",
+            current_price=float(df["close"].iloc[-1]),
+            message=f"No model predictions are currently available for {asset}.",
+        )
+
+    current_price = float(df["close"].iloc[-1])
+    weighted_predictions = []
+    components = []
+    for payload in usable:
+        prediction = payload["prediction"]
+        model_key = payload["model_key"]
+        base_weight = ENSEMBLE_BASE_WEIGHTS.get(model_key, 1.0)
+        confidence_weight = max(float(prediction.get("confidence") or 50.0) / 100.0, 0.25)
+        weight = base_weight * confidence_weight
+        predicted_close = float(prediction["predicted_close"])
+        weighted_predictions.append((predicted_close, weight))
+        components.append(
+            {
+                "model_key": model_key,
+                "predicted_close": predicted_close,
+                "confidence": prediction.get("confidence"),
+                "signal": prediction.get("signal"),
+                "weight": round(weight, 4),
+            }
+        )
+
+    total_weight = sum(weight for _, weight in weighted_predictions) or 1.0
+    predicted_close = sum(price * weight for price, weight in weighted_predictions) / total_weight
+    disagreement_pct = float(np.std([price for price, _ in weighted_predictions]) / max(current_price, 1e-8) * 100)
+    component_conf = float(np.mean([float(component.get("confidence") or 50.0) for component in components]))
+    confidence = max(15.0, min(95.0, component_conf - disagreement_pct * 4))
+
+    mae_candidates = [payload.get("mae_at_time") for payload in usable if payload.get("mae_at_time") is not None]
+    mae_approx = float(np.mean(mae_candidates)) if mae_candidates else _compute_mae(df)
+    signal, strength, change_pct = generate_signal(current_price, predicted_close, mae_approx)
+    uncertainty = {
+        "lower": min(price for price, _ in weighted_predictions),
+        "median": predicted_close,
+        "upper": max(price for price, _ in weighted_predictions),
+    }
+    notes = (
+        "Confidence-weighted ensemble of "
+        + ", ".join(component["model_key"] for component in components)
+        + f". Model disagreement: {disagreement_pct:.2f}%."
+    )
+    prediction = build_prediction_item(
+        asset=asset,
+        model_key="ensemble",
+        prediction_type="actual",
+        predicted_close=predicted_close,
+        predicted_open=None,
+        predicted_volume=None,
+        predicted_change_pct=change_pct,
+        confidence=confidence,
+        current_price=current_price,
+        horizon="1d",
+        signal=signal,
+        signal_strength=strength,
+        model_version="ensemble:" + "+".join(component["model_key"] for component in components),
+        mae_at_time=mae_approx,
+        mc_lower=uncertainty["lower"],
+        mc_upper=uncertainty["upper"],
+        notes=notes,
+        created_at=datetime.utcnow(),
+    )
+    response = build_model_response(
+        asset=asset,
+        model_key="ensemble",
+        status="ok",
+        current_price=current_price,
+        prediction=prediction,
+        predictions=[prediction],
+        model_version=prediction["model_version"],
+        prediction_type="actual",
+        risk=_build_risk(asset, current_price, signal, df),
+        uncertainty=uncertainty,
+        notes=notes,
+    )
+    response["components"] = components
+    response["disagreement_pct"] = round(disagreement_pct, 4)
+    response["run_id"] = new_prediction_run_id("ensemble")
+    response["input_window_end"] = _input_window_end(df)
+    return response
 
 
 async def run_prediction_workspace(asset: str) -> Dict:
@@ -446,6 +580,7 @@ async def run_prediction_workspace(asset: str) -> Dict:
     if has_tft(asset):
         insert_at = 1 if has_nhits(asset) else 0
         models.insert(insert_at, await run_multi_horizon_prediction(asset, model_key="tft", df=df))
+    models.append(await run_ensemble_prediction(asset, df=df))
     return build_workspace_response(asset=asset, models=models, current_price=float(df["close"].iloc[-1]))
 
 
@@ -580,3 +715,39 @@ async def train_model(
     except Exception as exc:
         logger.error(f"[{asset}] Training failed: {exc}", exc_info=True)
         return {"asset": asset, "status": "error", "model_key": model_key, "message": str(exc)}
+
+
+async def train_any_model(
+    asset: str,
+    period: str = "2y",
+    epochs: Optional[int] = None,
+    model_key: str = "nhits",
+) -> Dict:
+    model_key = model_key.lower()
+    if model_key in {"nhits", "tft"}:
+        return await train_model(asset, period=period, epochs=epochs, model_key=model_key)
+
+    if model_key == "lightgbm":
+        from app.services.lightgbm_service import train_lightgbm
+
+        asset = asset.upper()
+        df = await get_historical_data(asset, period=period)
+        if df.empty or len(df) < 80:
+            return {
+                "asset": asset,
+                "model_key": model_key,
+                "status": "error",
+                "message": f"Insufficient historical data for {asset} ({len(df)} rows)",
+            }
+        result = train_lightgbm(asset, df, settings.MODEL_SAVE_PATH)
+        result["asset"] = asset
+        result["model_key"] = model_key
+        result["model_version"] = result.get("version")
+        return result
+
+    return {
+        "asset": asset.upper(),
+        "model_key": model_key,
+        "status": "error",
+        "message": f"Unsupported model_key: {model_key}",
+    }

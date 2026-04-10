@@ -67,6 +67,7 @@ class AgentTrade(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     session_id = Column(Integer, ForeignKey("agent_sessions.id"), nullable=False, index=True)
+    prediction_id = Column(Integer, ForeignKey("predictions.id"), nullable=True, index=True)
 
     asset = Column(String(16), nullable=False, index=True)
     side = Column(String(8), nullable=False)  # "buy" or "sell"
@@ -82,6 +83,11 @@ class AgentTrade(Base):
     signal_strength = Column(Float, nullable=True)
     confidence = Column(Float, nullable=True)
     prediction_horizon = Column(String(16), nullable=True)
+    prediction_run_id = Column(String(64), nullable=True, index=True)
+    model_key_used = Column(String(32), nullable=True)
+    model_version_used = Column(String(64), nullable=True)
+    decision_source = Column(String(32), nullable=True, default="prediction_record")
+    decision_notes = Column(Text, nullable=True)
 
     # Result
     status = Column(String(16), nullable=False, default=TradeStatus.OPEN.value)
