@@ -77,7 +77,7 @@ export default function LoginPage() {
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-[1.25fr_1fr] lg:min-h-screen">
 
         {/* ── LEFT — editorial hero (form appears ABOVE this on mobile) ── */}
-        <div className="relative order-2 lg:order-1 flex flex-col border-t lg:border-t-0 lg:border-r border-surface-border/60 p-8 lg:p-12 xl:p-16">
+        <div className="relative min-w-0 order-2 lg:order-1 flex flex-col border-t lg:border-t-0 lg:border-r border-surface-border/60 p-8 lg:p-12 xl:p-16">
 
           {/* Wordmark */}
           <div className="flex items-center justify-between animate-fade-in">
@@ -160,7 +160,7 @@ export default function LoginPage() {
         </div>
 
         {/* ── RIGHT — auth form (shows FIRST on mobile so sign-in is always visible) ── */}
-        <div className="relative order-1 lg:order-2 flex items-center justify-center min-h-screen lg:min-h-0 p-8 lg:p-12">
+        <div className="relative min-w-0 order-1 lg:order-2 flex items-center justify-center min-h-screen lg:min-h-0 p-8 lg:p-12">
           <div className="w-full max-w-sm animate-rise-slow">
 
             {/* Tag */}
