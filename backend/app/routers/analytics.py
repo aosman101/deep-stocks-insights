@@ -236,6 +236,7 @@ async def compare_methods(
 async def walk_forward_accuracy(
     asset: str,
     period: str = Query(default="1y"),
+    db: Session = Depends(get_db),
     _: User = Depends(get_current_active_user),
 ):
     """
