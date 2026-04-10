@@ -242,6 +242,7 @@ def prediction_history(
             "predicted_change_pct": r.predicted_change_pct,
             "confidence": r.confidence,
             "current_price": r.current_price,
+            "prediction_horizon": r.prediction_horizon,
             "signal": r.signal,
             "signal_strength": r.signal_strength,
             "stop_loss": r.stop_loss,
