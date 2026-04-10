@@ -6,14 +6,13 @@ const TRAINING_TIMEOUT = 120_000
 
 const api = axios.create({ baseURL: '/', timeout: DEFAULT_TIMEOUT })
 
-// Auto-logout on 401
+// 401 interceptor (auth bypass mode — no redirect, just clean up stale token)
 api.interceptors.response.use(
   r => r,
   err => {
     if (err.response?.status === 401) {
       localStorage.removeItem('dsi_token')
       delete api.defaults.headers.common['Authorization']
-      window.location.href = '/login'
     }
     return Promise.reject(err)
   }
