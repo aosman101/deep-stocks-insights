@@ -13,6 +13,7 @@ before being stored in PriceCache or returned to the frontend.
 
 import asyncio
 import logging
+import threading
 import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
@@ -68,25 +69,27 @@ def _set_cached_hist(key: str, df: pd.DataFrame):
 #  Shared httpx client (connection pooling)
 # ─────────────────────────────────────────────────────────────
 
-_shared_client: Optional[httpx.AsyncClient] = None
+_shared_clients: Dict[int, httpx.AsyncClient] = {}
 
 
 def _get_client() -> httpx.AsyncClient:
-    global _shared_client
-    if _shared_client is None or _shared_client.is_closed:
-        _shared_client = httpx.AsyncClient(
+    thread_id = threading.get_ident()
+    client = _shared_clients.get(thread_id)
+    if client is None or client.is_closed:
+        client = httpx.AsyncClient(
             timeout=15.0,
             limits=httpx.Limits(max_connections=20),
         )
-    return _shared_client
+        _shared_clients[thread_id] = client
+    return client
 
 
 async def close_shared_client():
     """Call on app shutdown to cleanly close the connection pool."""
-    global _shared_client
-    if _shared_client and not _shared_client.is_closed:
-        await _shared_client.aclose()
-        _shared_client = None
+    for thread_id, client in list(_shared_clients.items()):
+        if client and not client.is_closed:
+            await client.aclose()
+        _shared_clients.pop(thread_id, None)
 
 
 # ─────────────────────────────────────────────────────────────

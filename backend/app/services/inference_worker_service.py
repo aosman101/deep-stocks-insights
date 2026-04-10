@@ -7,6 +7,7 @@ This keeps heavy model work off the immediate request path whenever possible.
 from __future__ import annotations
 
 import asyncio
+import itertools
 import logging
 from datetime import datetime
 from typing import Dict, Iterable, Optional
@@ -16,9 +17,10 @@ from app.database import SessionLocal
 
 logger = logging.getLogger(__name__)
 
-_job_queue: Optional[asyncio.Queue] = None
+_job_queue: Optional[asyncio.PriorityQueue] = None
 _worker_tasks: list[asyncio.Task] = []
 _jobs: Dict[str, Dict] = {}
+_job_sequence = itertools.count()
 
 
 def _job_payload(job_id: str) -> Dict:
@@ -43,12 +45,35 @@ def _normalize_model_keys(asset: str, model_keys: Optional[Iterable[str]]) -> li
     return normalized
 
 
+async def _run_async_callable(func, *args, **kwargs):
+    """
+    Execute an async callable in a worker thread with its own event loop so
+    model loading/inference does not monopolise the main FastAPI event loop.
+    """
+    return await asyncio.to_thread(lambda: asyncio.run(func(*args, **kwargs)))
+
+
+def _priority_for_source(trigger_source: str) -> int:
+    source = (trigger_source or "").lower()
+    if source == "manual":
+        return 0
+    if source == "workspace_refresh":
+        return 1
+    if source == "refresh":
+        return 2
+    if source == "scheduled_refresh":
+        return 3
+    if source == "startup_warm":
+        return 4
+    return 5
+
+
 async def start_inference_workers(count: int = 1):
     global _job_queue
     if _worker_tasks:
         return
 
-    _job_queue = asyncio.Queue()
+    _job_queue = asyncio.PriorityQueue()
     for idx in range(max(1, count)):
         _worker_tasks.append(asyncio.create_task(_worker_loop(idx + 1)))
     logger.info("Started %s inference worker(s)", len(_worker_tasks))
@@ -60,7 +85,7 @@ async def stop_inference_workers():
         return
 
     for _ in _worker_tasks:
-        await _job_queue.put(None)
+        await _job_queue.put((9999, next(_job_sequence), None))
     await asyncio.gather(*_worker_tasks, return_exceptions=True)
     _worker_tasks.clear()
     _job_queue = None
@@ -83,6 +108,7 @@ async def submit_prediction_refresh(
     normalized_models = _normalize_model_keys(asset, model_keys)
     loop = asyncio.get_running_loop()
     job_id = f"infer_{uuid4().hex[:20]}"
+    priority = _priority_for_source(trigger_source)
     _jobs[job_id] = {
         "job_id": job_id,
         "asset": asset,
@@ -100,7 +126,7 @@ async def submit_prediction_refresh(
         "error": None,
         "future": loop.create_future(),
     }
-    await _job_queue.put(job_id)
+    await _job_queue.put((priority, next(_job_sequence), job_id))
     return job_id
 
 
@@ -170,10 +196,11 @@ async def queue_priority_asset_refreshes(
 async def _worker_loop(worker_id: int):
     assert _job_queue is not None
     while True:
-        job_id = await _job_queue.get()
-        if job_id is None:
+        item = await _job_queue.get()
+        if item[2] is None:
             _job_queue.task_done()
             return
+        _, _, job_id = item
 
         job = _jobs[job_id]
         future = job["future"]
@@ -209,6 +236,7 @@ async def _run_job(job: Dict) -> Dict:
         run_multi_horizon_prediction,
         warm_prediction_runtime,
     )
+    from app.services.runtime_snapshot_service import store_analytics_snapshot
 
     asset = job["asset"]
     model_keys = job["model_keys"]
@@ -217,19 +245,23 @@ async def _run_job(job: Dict) -> Dict:
     trigger_source = job["trigger_source"]
     persist = job["persist"]
 
-    await warm_market_data(asset)
-    await warm_prediction_runtime(asset, model_keys=model_keys + (["analytics"] if include_analytics else []))
+    await _run_async_callable(warm_market_data, asset)
+    await _run_async_callable(
+        warm_prediction_runtime,
+        asset,
+        model_keys=model_keys + (["analytics"] if include_analytics else []),
+    )
 
     db = SessionLocal()
     try:
         runs = []
         for model_key in model_keys:
             if model_key == "ensemble":
-                payload = await run_ensemble_prediction(asset)
+                payload = await _run_async_callable(run_ensemble_prediction, asset)
             elif model_key == "lightgbm":
-                payload = await run_lightgbm_model_prediction(asset)
+                payload = await _run_async_callable(run_lightgbm_model_prediction, asset)
             elif model_key in {"nhits", "tft"}:
-                payload = await run_multi_horizon_prediction(asset, model_key=model_key)
+                payload = await _run_async_callable(run_multi_horizon_prediction, asset, model_key=model_key)
             else:
                 continue
 
@@ -243,7 +275,9 @@ async def _run_job(job: Dict) -> Dict:
             runs.append(payload)
 
         if include_analytics:
-            analytics_payload = await run_analytics_prediction(asset)
+            analytics_payload = await _run_async_callable(run_analytics_prediction, asset)
+            if "error" not in analytics_payload:
+                store_analytics_snapshot(asset, analytics_payload)
             if persist and "error" not in analytics_payload:
                 analytics_payload = persist_analytics_response(
                     db,

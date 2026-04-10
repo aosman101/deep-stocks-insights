@@ -9,14 +9,15 @@ Analytics Router — /api/analytics  (Estimated / statistical predictions)
 
 import asyncio
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.core.dependencies import get_current_active_user
 from app.models.user import User
-from app.models.prediction import Prediction
+from app.models.prediction import ModelMetrics, Prediction
 
 logger = logging.getLogger(__name__)
 
@@ -32,9 +33,116 @@ def _validate_asset(asset: str) -> str:
     return asset
 
 
+def _analytics_row_to_payload(row: Prediction) -> dict:
+    return {
+        "id": row.id,
+        "asset": row.asset,
+        "model_key": row.model_key,
+        "run_id": row.run_id,
+        "trigger_source": row.trigger_source,
+        "input_window_end": row.input_window_end,
+        "current_price": row.current_price,
+        "ensemble_forecast": row.predicted_close,
+        "ensemble_change_pct": row.predicted_change_pct,
+        "ensemble_signal": row.signal,
+        "ensemble_confidence": row.confidence,
+        "stop_loss": row.stop_loss,
+        "take_profit": row.take_profit,
+        "generated_at": row.created_at,
+        "cache": {"source": "stored_prediction", "fresh": True},
+    }
+
+
+def _metrics_rows_to_accuracy_payload(asset: str, period: str, rows: list[ModelMetrics]) -> dict:
+    labels = {"nhits": "N-HiTS", "tft": "TFT", "lightgbm": "LightGBM", "ensemble": "Ensemble"}
+    methods = {}
+    leaderboard = []
+    for row in rows:
+        methods[row.model_key] = {
+            "key": row.model_key,
+            "label": labels.get(row.model_key, row.model_key.upper()),
+            "status": "ok",
+            "reason": None,
+            "total_predictions": row.total_predictions or 0,
+            "verified": row.total_predictions or 0,
+            "correct_directions": row.correct_directions or 0,
+            "directional_accuracy": row.directional_accuracy,
+            "mae": row.mae,
+            "rmse": row.rmse,
+            "mape": row.mape,
+            "comparison": [],
+            "method": row.notes,
+        }
+        leaderboard.append(
+            {
+                "key": row.model_key,
+                "label": methods[row.model_key]["label"],
+                "directional_accuracy": row.directional_accuracy,
+                "mae": row.mae,
+                "rmse": row.rmse,
+                "mape": row.mape,
+                "total_predictions": row.total_predictions or 0,
+            }
+        )
+
+    if not leaderboard:
+        return {
+            "asset": asset,
+            "period": period,
+            "methods": {},
+            "leaderboard": [],
+            "best_method": None,
+            "best_method_label": None,
+            "selected_method": "ensemble",
+            "total_predictions": 0,
+            "verified": 0,
+            "correct_directions": 0,
+            "mae": None,
+            "rmse": None,
+            "mape": None,
+            "directional_accuracy": None,
+            "comparison": [],
+            "method": None,
+            "generated_at": datetime.utcnow().isoformat(),
+            "cache": {"source": "model_health", "fresh": True},
+        }
+
+    leaderboard.sort(
+        key=lambda item: (
+            item["directional_accuracy"] if item["directional_accuracy"] is not None else -1.0,
+            -(item["mae"] if item["mae"] is not None else 1e9),
+        ),
+        reverse=True,
+    )
+    best = leaderboard[0]
+    selected = methods[best["key"]]
+    return {
+        "asset": asset,
+        "period": period,
+        "methods": methods,
+        "leaderboard": leaderboard,
+        "best_method": best["key"],
+        "best_method_label": best["label"],
+        "selected_method": best["key"],
+        "total_predictions": selected["total_predictions"],
+        "verified": selected["verified"],
+        "correct_directions": selected["correct_directions"],
+        "mae": selected["mae"],
+        "rmse": selected["rmse"],
+        "mape": selected["mape"],
+        "directional_accuracy": selected["directional_accuracy"],
+        "comparison": [],
+        "method": selected["method"],
+        "generated_at": max((row.computed_at for row in rows if row.computed_at), default=datetime.utcnow()).isoformat(),
+        "cache": {"source": "model_health", "fresh": True},
+    }
+
+
 @router.get("/{asset}")
 async def estimated_prediction(
     asset: str,
+    force_refresh: bool = Query(default=False),
+    max_age_minutes: int = Query(default=settings.ANALYTICS_MAX_AGE_MINUTES, ge=1, le=1440),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -45,35 +153,46 @@ async def estimated_prediction(
     """
     asset = _validate_asset(asset)
     try:
-        from app.services.market_service import get_historical_data
-        from app.services.indicators_service import compute_indicators
-        from app.services.prediction_service import run_analytics_prediction
-        from app.services.risk_service import attach_risk_to_prediction
-        from app.services.prediction_record_service import persist_analytics_response
+        from app.services.inference_worker_service import request_prediction_refresh
+        from app.services.prediction_record_service import latest_prediction_row
+        from app.services.runtime_snapshot_service import get_analytics_snapshot
 
-        result = await run_analytics_prediction(asset)
-        if "error" in result:
-            raise HTTPException(status_code=503, detail=result["error"])
+        if not force_refresh:
+            cached_snapshot = get_analytics_snapshot(asset)
+            if cached_snapshot:
+                payload = dict(cached_snapshot)
+                payload["cache"] = {"source": "runtime_snapshot", "fresh": True}
+                return payload
+            cached = latest_prediction_row(
+                db,
+                asset,
+                model_key="analytics",
+                prediction_type="estimated",
+                max_age_minutes=max_age_minutes,
+            )
+            if cached:
+                return _analytics_row_to_payload(cached)
 
-        # Attach risk levels
-        result["signal"] = result.get("ensemble_signal", "HOLD")
-        result["current_price"] = result.get("current_price", 0)
-        result["asset"] = asset
-
-        df = await get_historical_data(asset, period="1y")
-        indicators = compute_indicators(df) if not df.empty else {}
-        atr = indicators.get("atr_14")
-        attach_risk_to_prediction(result, atr)
-
-        return persist_analytics_response(
-            db,
-            result,
+        result = await request_prediction_refresh(
+            asset=asset,
+            model_keys=[],
+            include_analytics=True,
             user_id=current_user.id,
             trigger_source="manual",
+            persist=True,
+            timeout_seconds=settings.INFERENCE_REQUEST_TIMEOUT_SECONDS,
         )
+        analytics_payload = next((run for run in (result.get("runs") or []) if run.get("model_key") == "analytics"), None)
+        if not analytics_payload:
+            raise HTTPException(status_code=503, detail=f"No analytics snapshot was generated for {asset}")
+        analytics_payload["job_id"] = result.get("job_id")
+        analytics_payload["cache"] = {"source": "inference_worker", "fresh": True}
+        return analytics_payload
 
     except HTTPException:
         raise
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Analytics refresh timed out. Retry shortly.")
     except Exception as e:
         logger.error(f"Analytics prediction failed for {asset}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -236,6 +355,7 @@ async def compare_methods(
 async def walk_forward_accuracy(
     asset: str,
     period: str = Query(default="1y"),
+    force_refresh: bool = Query(default=False),
     db: Session = Depends(get_db),
     _: User = Depends(get_current_active_user),
 ):
@@ -246,6 +366,32 @@ async def walk_forward_accuracy(
     """
     asset = _validate_asset(asset)
     try:
+        from app.services.runtime_snapshot_service import get_evaluation_snapshot, store_evaluation_snapshot
+
+        if not force_refresh:
+            cached_snapshot = get_evaluation_snapshot(asset, period)
+            if cached_snapshot:
+                payload = dict(cached_snapshot)
+                payload["cache"] = {"source": "runtime_snapshot", "fresh": True}
+                return payload
+            cutoff = datetime.utcnow() - timedelta(seconds=settings.WALK_FORWARD_CACHE_TTL_SECONDS)
+            cached_rows = (
+                db.query(ModelMetrics)
+                .filter(
+                    ModelMetrics.asset == asset,
+                    ModelMetrics.source == "walk_forward",
+                    ModelMetrics.period == period,
+                    ModelMetrics.computed_at >= cutoff,
+                )
+                .order_by(ModelMetrics.computed_at.desc())
+                .all()
+            )
+            if cached_rows:
+                latest_by_model = {}
+                for row in cached_rows:
+                    latest_by_model.setdefault(row.model_key, row)
+                return _metrics_rows_to_accuracy_payload(asset, period, list(latest_by_model.values()))
+
         from app.services.market_service import get_historical_data
 
         df = await get_historical_data(asset, period=period)
@@ -258,6 +404,7 @@ async def walk_forward_accuracy(
         loop = asyncio.get_running_loop()
         payload = await loop.run_in_executor(None, lambda: evaluate_model_stack(df, asset, period))
         persist_walk_forward_metrics(db, asset, period, payload)
+        store_evaluation_snapshot(asset, period, payload)
         return payload
     except HTTPException:
         raise

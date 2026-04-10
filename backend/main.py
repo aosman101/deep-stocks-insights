@@ -75,7 +75,18 @@ async def lifespan(app: FastAPI):
             logger.info(f"  Retraining {asset} model...")
             asyncio.create_task(train_model(asset))
 
-    # 5. Start background price refresh scheduler
+    # 5. Start inference workers and schedule hot-asset refreshes
+    from app.services.inference_worker_service import queue_priority_asset_refreshes, start_inference_workers
+    priority_assets = [
+        asset.strip().upper()
+        for asset in settings.PREDICTION_PRIORITY_ASSETS.split(",")
+        if asset.strip()
+    ]
+    await start_inference_workers(settings.INFERENCE_WORKER_COUNT)
+    if priority_assets:
+        logger.info("  Priority assets for warm refresh: %s", ", ".join(priority_assets))
+
+    # 6. Start background scheduler
     from apscheduler.schedulers.asyncio import AsyncIOScheduler
     from app.services.market_service import get_live_quote, upsert_live_quote
     from app.database import SessionLocal
@@ -175,16 +186,36 @@ async def lifespan(app: FastAPI):
         finally:
             db.close()
 
+    async def refresh_priority_predictions():
+        if not priority_assets:
+            return
+        await queue_priority_asset_refreshes(
+            priority_assets,
+            include_analytics=True,
+            trigger_source="scheduled_refresh",
+        )
+
     scheduler.add_job(refresh_quotes, "interval", minutes=1, id="quote_refresh")
     scheduler.add_job(verify_predictions, "interval", hours=6, id="verify_predictions")
+    scheduler.add_job(
+        refresh_priority_predictions,
+        "interval",
+        minutes=settings.PREDICTION_REFRESH_MINUTES,
+        id="priority_prediction_refresh",
+    )
     scheduler.start()
-    logger.info("  Background scheduler started (quote refresh every 60s)")
+    logger.info(
+        "  Background scheduler started (quotes every 60s, predictions every %ss)",
+        settings.PREDICTION_REFRESH_MINUTES * 60,
+    )
     logger.info("=" * 60)
 
     yield   # ← app runs here
 
     scheduler.shutdown()
+    from app.services.inference_worker_service import stop_inference_workers
     from app.services.market_service import close_shared_client
+    await stop_inference_workers()
     await close_shared_client()
     logger.info("Deep Stock Insights — shutdown complete")
 

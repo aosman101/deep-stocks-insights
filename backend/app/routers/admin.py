@@ -193,12 +193,35 @@ def get_training_job_status(
     return job
 
 
+@router.get("/inference-jobs")
+def list_inference_job_status(
+    _: User = Depends(get_current_admin),
+):
+    from app.services.inference_worker_service import list_inference_jobs
+
+    return list_inference_jobs()
+
+
+@router.get("/inference-jobs/{job_id}")
+def get_inference_job_status(
+    job_id: str,
+    _: User = Depends(get_current_admin),
+):
+    from app.services.inference_worker_service import get_inference_job
+
+    job = get_inference_job(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Inference job not found.")
+    return job
+
+
 @router.get("/model-status")
 def model_status(_: User = Depends(get_current_admin)):
     """Report training status for each asset model."""
     from app.ml.nhits_model import get_model as get_nhits_model
     from app.ml.tft_model import get_model as get_tft_model
     from app.services.asset_registry import ALL_ASSETS, NHITS_FEATURED, TFT_FEATURED
+    from app.services.inference_worker_service import list_inference_jobs
     from app.services.model_output_service import get_model_disk_status
     from app.services.training_job_service import list_training_jobs
 
@@ -243,6 +266,7 @@ def model_status(_: User = Depends(get_current_admin)):
     return {
         "models": status_report,
         "training_jobs": list_training_jobs()[:25],
+        "inference_jobs": list_inference_jobs()[:25],
     }
 
 
@@ -289,6 +313,8 @@ def system_stats(
     _: User = Depends(get_current_admin),
 ):
     """Return aggregate counts and cache statistics."""
+    from app.services.inference_worker_service import list_inference_jobs
+
     return {
         "users": {
             "total": db.query(User).count(),
@@ -307,6 +333,9 @@ def system_stats(
         "live_quotes": {
             q.asset: q.price
             for q in db.query(LiveQuote).all()
+        },
+        "inference_jobs": {
+            "recent": len(list_inference_jobs()),
         },
         "generated_at": datetime.utcnow().isoformat(),
     }

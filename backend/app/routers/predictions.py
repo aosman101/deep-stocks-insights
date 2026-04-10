@@ -7,6 +7,7 @@ Predictions Router — /api/predictions
   GET  /performance/{asset} — model accuracy metrics
 """
 
+import asyncio
 import logging
 from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -75,18 +76,23 @@ def _cached_response_from_rows(rows: list[Prediction]) -> dict:
     if not rows:
         raise ValueError("rows must not be empty")
 
+    from app.services.model_output_service import get_model_label, get_supported_horizons
+
     horizon_rank = {"1d": 0, "3d": 1, "5d": 2, "7d": 3}
     items = [_prediction_item_from_row(row) for row in rows]
     items.sort(key=lambda item: horizon_rank.get(item.get("prediction_horizon"), 99))
     primary = next((item for item in items if item.get("prediction_horizon") == "1d"), items[0])
     source_row = rows[0]
-    return {
+    payload = {
         "asset": source_row.asset,
         "model_key": source_row.model_key,
+        "model_label": get_model_label(source_row.model_key),
+        "model_type": get_model_label(source_row.model_key),
         "model_version": source_row.model_version,
         "prediction_type": source_row.prediction_type,
         "status": "ok",
         "current_price": primary.get("current_price"),
+        "supported_horizons": get_supported_horizons(source_row.model_key),
         "prediction": primary,
         "predictions": items,
         "predicted_close": primary.get("predicted_close"),
@@ -94,6 +100,14 @@ def _cached_response_from_rows(rows: list[Prediction]) -> dict:
         "signal": primary.get("signal"),
         "confidence": primary.get("confidence"),
         "prediction_horizon": primary.get("prediction_horizon"),
+        "risk": {
+            "standard": {
+                "stop_loss": primary.get("stop_loss"),
+                "take_profit": primary.get("take_profit"),
+                "risk_reward_ratio": primary.get("risk_reward_ratio"),
+            }
+        },
+        "uncertainty": None,
         "run_id": primary.get("run_id"),
         "trigger_source": primary.get("trigger_source"),
         "input_window_end": primary.get("input_window_end"),
@@ -104,7 +118,10 @@ def _cached_response_from_rows(rows: list[Prediction]) -> dict:
         },
         "generated_at": source_row.created_at,
     }
-
+    for horizon in ("1d", "3d", "7d"):
+        payload_key = f"prediction_{horizon}"
+        payload[payload_key] = next((item for item in items if item.get("prediction_horizon") == horizon), None)
+    return payload
 
 def _pick_requested_prediction(payload: dict, horizon: str) -> dict:
     predictions = payload.get("predictions") or []
@@ -126,6 +143,8 @@ async def predict_asset(
     asset: str,
     horizon: str = Query(default="1d", description="1d | 3d | 7d"),
     model_key: str = Query(default="nhits", description="nhits | tft | lightgbm | ensemble"),
+    force_refresh: bool = Query(default=False),
+    max_age_minutes: int = Query(default=settings.PREDICTION_MAX_AGE_MINUTES, ge=1, le=1440),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
@@ -140,36 +159,65 @@ async def predict_asset(
         raise HTTPException(status_code=400, detail="Horizon must be 1d, 3d, or 7d")
 
     try:
-        from app.services.prediction_service import (
-            run_ensemble_prediction,
-            run_lightgbm_model_prediction,
-            run_sequence_prediction,
-        )
-        from app.services.prediction_record_service import persist_model_response
+        from app.services.inference_worker_service import request_prediction_refresh
+        from app.services.prediction_record_service import latest_prediction_row, latest_prediction_run
 
-        if model_key == "lightgbm":
-            asset = _validate_asset(asset)
-            result = await run_lightgbm_model_prediction(asset)
-        elif model_key == "ensemble":
+        if model_key == "ensemble":
             asset = _validate_asset(asset)
             if horizon != "1d":
                 raise HTTPException(status_code=400, detail="Ensemble predictions currently support only horizon=1d")
-            result = await run_ensemble_prediction(asset)
+        elif model_key == "lightgbm":
+            asset = _validate_asset(asset)
         else:
             asset = _validate_sequence_asset(asset, model_key)
-            result = await run_sequence_prediction(asset, horizon=horizon, model_key=model_key)
 
-        if result.get("status") != "ok":
-            raise HTTPException(status_code=503, detail=result.get("error") or result.get("message"))
-        return persist_model_response(
-            db,
-            result,
+        if not force_refresh:
+            if model_key in {"nhits", "tft"}:
+                cached_rows = latest_prediction_run(
+                    db,
+                    asset,
+                    model_key=model_key,
+                    prediction_type="actual",
+                    max_age_minutes=max_age_minutes,
+                )
+                if cached_rows:
+                    return _pick_requested_prediction(_cached_response_from_rows(cached_rows), horizon)
+            else:
+                cached_row = latest_prediction_row(
+                    db,
+                    asset,
+                    model_key=model_key,
+                    prediction_type="actual",
+                    horizon=horizon,
+                    max_age_minutes=max_age_minutes,
+                )
+                if cached_row:
+                    return _cached_response_from_rows([cached_row])
+
+        job_result = await request_prediction_refresh(
+            asset=asset,
+            model_keys=[model_key],
+            include_analytics=False,
             user_id=current_user.id,
             trigger_source="manual",
+            persist=True,
+            timeout_seconds=settings.INFERENCE_REQUEST_TIMEOUT_SECONDS,
         )
-
+        runs = job_result.get("runs") or []
+        result = next((run for run in runs if run.get("model_key") == model_key), None)
+        if not result:
+            raise HTTPException(status_code=503, detail=f"No {model_key} prediction was generated for {asset}")
+        if result.get("status") != "ok":
+            raise HTTPException(status_code=503, detail=result.get("error") or result.get("message"))
+        if model_key in {"nhits", "tft"}:
+            result = _pick_requested_prediction(result, horizon)
+        result["job_id"] = job_result.get("job_id")
+        result["cache"] = {"source": "inference_worker", "fresh": True}
+        return result
     except HTTPException:
         raise
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Prediction refresh timed out. Retry shortly.")
     except Exception as e:
         logger.error(f"Prediction failed for {asset}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -179,32 +227,52 @@ async def predict_asset(
 async def multi_horizon_prediction(
     asset: str,
     model_key: str = Query(default="nhits", description="nhits | tft"),
+    force_refresh: bool = Query(default=False),
+    max_age_minutes: int = Query(default=settings.PREDICTION_MAX_AGE_MINUTES, ge=1, le=1440),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """Return 1d, 3d, and 7d sequence-model predictions simultaneously."""
-    from app.services.prediction_record_service import persist_model_response
     model_key = model_key.lower()
     if model_key not in ("nhits", "tft"):
         raise HTTPException(status_code=400, detail="model_key must be nhits or tft")
     asset = _validate_sequence_asset(asset, model_key)
     try:
-        from app.services.prediction_service import run_multi_horizon_prediction
+        from app.services.inference_worker_service import request_prediction_refresh
+        from app.services.prediction_record_service import latest_prediction_run
 
-        result = await run_multi_horizon_prediction(asset, model_key=model_key)
-        if result.get("status") != "ok":
-            raise HTTPException(
-                status_code=503,
-                detail=result.get("error") or result.get("message")
+        if not force_refresh:
+            cached_rows = latest_prediction_run(
+                db,
+                asset,
+                model_key=model_key,
+                prediction_type="actual",
+                max_age_minutes=max_age_minutes,
             )
-        return persist_model_response(
-            db,
-            result,
+            if cached_rows:
+                return _cached_response_from_rows(cached_rows)
+
+        job_result = await request_prediction_refresh(
+            asset=asset,
+            model_keys=[model_key],
+            include_analytics=False,
             user_id=current_user.id,
             trigger_source="manual",
+            persist=True,
+            timeout_seconds=settings.INFERENCE_REQUEST_TIMEOUT_SECONDS,
         )
+        result = next((run for run in (job_result.get("runs") or []) if run.get("model_key") == model_key), None)
+        if not result:
+            raise HTTPException(status_code=503, detail=f"No {model_key} prediction was generated for {asset}")
+        if result.get("status") != "ok":
+            raise HTTPException(status_code=503, detail=result.get("error") or result.get("message"))
+        result["job_id"] = job_result.get("job_id")
+        result["cache"] = {"source": "inference_worker", "fresh": True}
+        return result
     except HTTPException:
         raise
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Prediction refresh timed out. Retry shortly.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -212,14 +280,67 @@ async def multi_horizon_prediction(
 @router.get("/{asset}/workspace", response_model=dict)
 async def prediction_workspace(
     asset: str,
+    force_refresh: bool = Query(default=False),
+    max_age_minutes: int = Query(default=settings.PREDICTION_MAX_AGE_MINUTES, ge=1, le=1440),
     _: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
 ):
     """Return all available ML models for an asset in the shared schema."""
     asset = _validate_asset(asset)
     try:
-        from app.services.prediction_service import run_prediction_workspace
+        from app.services.asset_registry import has_nhits, has_tft
+        from app.services.inference_worker_service import request_prediction_refresh
+        from app.services.model_output_service import build_workspace_response
+        from app.services.prediction_record_service import latest_prediction_row, latest_prediction_run
 
-        return await run_prediction_workspace(asset)
+        if not force_refresh:
+            rows = []
+            for model_key in ("nhits", "tft", "lightgbm", "ensemble"):
+                if model_key == "nhits" and not has_nhits(asset):
+                    continue
+                if model_key == "tft" and not has_tft(asset):
+                    continue
+                if model_key in {"nhits", "tft"}:
+                    rows.extend(
+                        latest_prediction_run(
+                            db,
+                            asset,
+                            model_key=model_key,
+                            prediction_type="actual",
+                            max_age_minutes=max_age_minutes,
+                        )
+                    )
+                else:
+                    row = latest_prediction_row(
+                        db,
+                        asset,
+                        model_key=model_key,
+                        prediction_type="actual",
+                        max_age_minutes=max_age_minutes,
+                    )
+                    if row:
+                        rows.append(row)
+            if rows:
+                grouped = {}
+                for row in rows:
+                    grouped.setdefault(row.model_key, []).append(row)
+                models = [_cached_response_from_rows(grouped[key]) for key in grouped]
+                current_price = next((model.get("current_price") for model in models if model.get("current_price") is not None), None)
+                return build_workspace_response(asset=asset, models=models, current_price=current_price)
+
+        job_result = await request_prediction_refresh(
+            asset=asset,
+            model_keys=["nhits", "tft", "lightgbm", "ensemble"],
+            include_analytics=False,
+            trigger_source="workspace_refresh",
+            persist=True,
+            timeout_seconds=settings.INFERENCE_REQUEST_TIMEOUT_SECONDS,
+        )
+        models = [run for run in (job_result.get("runs") or []) if run.get("status") == "ok"]
+        current_price = next((model.get("current_price") for model in models if model.get("current_price") is not None), None)
+        return build_workspace_response(asset=asset, models=models, current_price=current_price)
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=504, detail="Workspace refresh timed out. Retry shortly.")
     except Exception as e:
         logger.error(f"Workspace prediction failed for {asset}: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -228,21 +349,13 @@ async def prediction_workspace(
 @router.post("/generate", response_model=dict)
 async def generate_predictions(
     payload: GeneratePredictionsRequest,
-    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
     """
     Generate and optionally persist a prediction snapshot across multiple assets/models.
     This gives the website a single action to refresh the model ledger before the agent runs.
     """
-    from app.services.prediction_service import (
-        run_ensemble_prediction,
-        run_lightgbm_model_prediction,
-        run_multi_horizon_prediction,
-        run_sequence_prediction,
-        run_analytics_prediction,
-    )
-    from app.services.prediction_record_service import persist_analytics_response, persist_model_response
+    from app.services.inference_worker_service import request_prediction_refresh
 
     supported_model_keys = {"ensemble", "nhits", "tft", "lightgbm"}
     requested_models = [model_key.lower() for model_key in payload.model_keys]
@@ -253,34 +366,16 @@ async def generate_predictions(
     results = []
     for raw_asset in payload.assets:
         asset = _validate_asset(raw_asset)
-        asset_runs = []
-        for model_key in requested_models:
-            if model_key == "ensemble":
-                result = await run_ensemble_prediction(asset)
-            elif model_key == "lightgbm":
-                result = await run_lightgbm_model_prediction(asset)
-            elif model_key == "nhits":
-                if asset not in NHITS_FEATURED:
-                    continue
-                result = await run_multi_horizon_prediction(asset, model_key="nhits")
-            elif model_key == "tft":
-                if asset not in TFT_FEATURED:
-                    continue
-                result = await run_multi_horizon_prediction(asset, model_key="tft")
-            else:
-                continue
-
-            if payload.persist and result.get("status") == "ok":
-                result = persist_model_response(db, result, user_id=current_user.id, trigger_source="refresh")
-            asset_runs.append(result)
-
-        if payload.include_analytics:
-            analytics = await run_analytics_prediction(asset)
-            if payload.persist and "error" not in analytics:
-                analytics = persist_analytics_response(db, analytics, user_id=current_user.id, trigger_source="refresh")
-            asset_runs.append(analytics)
-
-        results.append({"asset": asset, "runs": asset_runs})
+        job_result = await request_prediction_refresh(
+            asset=asset,
+            model_keys=requested_models,
+            include_analytics=payload.include_analytics,
+            user_id=current_user.id,
+            trigger_source="refresh",
+            persist=payload.persist,
+            timeout_seconds=settings.INFERENCE_REQUEST_TIMEOUT_SECONDS,
+        )
+        results.append({"asset": asset, "job_id": job_result.get("job_id"), "runs": job_result.get("runs", [])})
 
     return {
         "generated_at": datetime.utcnow(),
