@@ -5,50 +5,50 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Editorial Terminal — warm obsidian + parchment + burnt amber
+        // Cloud & Cobalt — cool cloud + midnight slate + cobalt
         surface: {
-          DEFAULT: '#0b0a08',   // warm obsidian
-          card:    '#14110d',   // warm coal
-          hover:   '#1c1913',   // raised warm coal
-          border:  '#2a241c',   // bronze shadow
-          ring:    '#3a3226',   // soft bronze ring
+          DEFAULT: '#f1f5f9',   // cool cloud
+          card:    '#ffffff',   // paper white
+          hover:   '#e2e8f0',   // overcast
+          border:  '#cbd5e1',   // steel hairline
+          ring:    '#94a3b8',   // pale steel ring
         },
         parchment: {
-          DEFAULT: '#f5eeda',   // warm paper
-          dim:     '#c9c0a8',   // aged paper
-          muted:   '#8c8373',   // dry grass
-          faint:   '#57503f',   // faded ink
+          DEFAULT: '#0f172a',   // midnight slate (primary text)
+          dim:     '#334155',   // iron
+          muted:   '#64748b',   // mist
+          faint:   '#94a3b8',   // pale steel
         },
         // Backwards-compat aliases (existing pages use these)
         accent: {
-          blue:   '#f5a524',    // mapped to primary amber (so legacy text-accent-blue still reads)
-          cyan:   '#d4a574',    // soft bronze
-          green:  '#a3e635',    // lime electric (bullish)
-          red:    '#f87171',    // coral (bearish)
-          amber:  '#f5a524',    // burnt gold
-          purple: '#c084fc',    // kept for accent variety
+          blue:   '#3b82f6',    // primary cobalt
+          cyan:   '#06b6d4',    // sky cyan
+          green:  '#10b981',    // emerald (bullish)
+          red:    '#ef4444',    // rose (bearish)
+          amber:  '#f59e0b',    // retained warning gold
+          purple: '#8b5cf6',    // accent variety
         },
         ink: {
-          DEFAULT: '#f5eeda',
-          dim:     '#c9c0a8',
-          muted:   '#8c8373',
+          DEFAULT: '#0f172a',
+          dim:     '#334155',
+          muted:   '#64748b',
         },
         ember: {
-          50:  '#fff7ed',
-          100: '#ffedd5',
-          200: '#fed7aa',
-          300: '#fdba74',
-          400: '#fb923c',
-          500: '#f59e0b',       // primary burnt amber
-          600: '#ea580c',       // vermillion
-          700: '#c2410c',
-          800: '#9a3412',
-          900: '#7c2d12',
+          50:  '#eff6ff',
+          100: '#dbeafe',
+          200: '#bfdbfe',
+          300: '#93c5fd',
+          400: '#60a5fa',
+          500: '#3b82f6',       // primary cobalt
+          600: '#2563eb',       // deep cobalt
+          700: '#1d4ed8',
+          800: '#1e40af',
+          900: '#1e3a8a',
         },
         btc:  '#f7931a',
         gold: '#f5a524',
-        bull: '#a3e635',        // lime
-        bear: '#f87171',        // coral
+        bull: '#10b981',        // emerald
+        bear: '#ef4444',        // rose
       },
       fontFamily: {
         // Editorial display — dramatic at large sizes
@@ -71,15 +71,15 @@ export default {
         'display-xl': ['8rem',    { lineHeight: '0.85', letterSpacing: '-0.05em' }],
       },
       boxShadow: {
-        'inset-border': 'inset 0 0 0 1px rgba(245, 238, 218, 0.08)',
-        'ember-glow':   '0 0 40px -8px rgba(245, 165, 36, 0.35)',
-        'card':         '0 1px 0 0 rgba(245,238,218,0.04), 0 8px 30px -12px rgba(0,0,0,0.6)',
-        'card-hover':   '0 1px 0 0 rgba(245,238,218,0.08), 0 20px 50px -15px rgba(0,0,0,0.75)',
+        'inset-border': 'inset 0 0 0 1px rgba(15, 23, 42, 0.06)',
+        'ember-glow':   '0 0 40px -8px rgba(59, 130, 246, 0.38)',
+        'card':         '0 1px 2px 0 rgba(15,23,42,0.04), 0 8px 28px -14px rgba(15,23,42,0.18)',
+        'card-hover':   '0 1px 2px 0 rgba(15,23,42,0.06), 0 20px 50px -18px rgba(59,130,246,0.28)',
       },
       backgroundImage: {
-        'grain':        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.96 0 0 0 0 0.93 0 0 0 0 0.85 0 0 0 0.55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(245,165,36,0.12), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(234,88,12,0.08), transparent 60%)',
-        'scanlines':    'repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(245,238,218,0.015) 2px, rgba(245,238,218,0.015) 3px)',
+        'grain':        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.12 0 0 0 0 0.22 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(59,130,246,0.12), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(37,99,235,0.08), transparent 60%)',
+        'scanlines':    'repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(15,23,42,0.022) 2px, rgba(15,23,42,0.022) 3px)',
       },
       animation: {
         'pulse-slow':  'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',
