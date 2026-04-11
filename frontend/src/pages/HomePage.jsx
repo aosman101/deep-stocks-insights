@@ -71,7 +71,7 @@ function QuoteRow({ symbol, quote, loading, index }) {
 }
 
 /* ── Editorial nav tile ── */
-function DeskTile({ mark, label, desc, icon: Icon, onClick, delay }) {
+function DeskTile({ label, desc, icon: Icon, onClick, delay }) {
   return (
     <button
       onClick={onClick}
@@ -83,10 +83,7 @@ function DeskTile({ mark, label, desc, icon: Icon, onClick, delay }) {
            style={{ background: 'radial-gradient(ellipse 80% 60% at 50% 100%, rgba(245,165,36,0.08), transparent 60%)' }} />
 
       <div className="relative">
-        <div className="flex items-start justify-between mb-5">
-          <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-parchment-faint group-hover:text-ember-500 transition-colors">
-            {mark}
-          </div>
+        <div className="flex items-start justify-end mb-5">
           <ArrowUpRight className="w-3.5 h-3.5 text-parchment-faint group-hover:text-ember-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
         </div>
 
@@ -221,11 +218,11 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <DeskTile mark="I"    label="Predict"       desc="Unified N-HiTS + LightGBM forecasts on any asset, any horizon."  icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
-          <DeskTile mark="II"   label="Charts"        desc="Full indicator suite: RSI, MACD, Bollinger, correlation heatmaps." icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
-          <DeskTile mark="III"  label="Comparison"    desc="Back-test the ensemble. Rank models by MAPE, Sharpe, and hit-rate." icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
-          <DeskTile mark="IV"   label="AI Insights"   desc="Scanner across the entire universe. Signal scoring & ranking."     icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
-          <DeskTile mark="V"    label="Agent Desk"    desc="Paper-trading agents with equity curves and session telemetry."    icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
+          <DeskTile label="Predict"     desc="Unified N-HiTS + LightGBM forecasts on any asset, any horizon."  icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
+          <DeskTile label="Charts"      desc="Full indicator suite: RSI, MACD, Bollinger, correlation heatmaps." icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
+          <DeskTile label="Comparison"  desc="Back-test the ensemble. Rank models by MAPE, Sharpe, and hit-rate." icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
+          <DeskTile label="AI Insights" desc="Scanner across the entire universe. Signal scoring & ranking."     icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
+          <DeskTile label="Agent Desk"  desc="Paper-trading agents with equity curves and session telemetry."    icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
         </div>
       </section>
 
