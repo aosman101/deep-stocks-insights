@@ -154,13 +154,16 @@ export default function HomePage() {
     <div className="max-w-7xl mx-auto">
 
       {/* ── Masthead / Editorial Hero ── */}
-      <section className="relative pt-6 pb-10 border-b border-surface-border">
-        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint mb-6">
-          <span>Today's Desk</span>
+      <section className="relative pt-4 pb-8 border-b border-surface-border">
+        <div className="flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint mb-5">
+          <span className="flex items-center gap-2">
+            <span className="h-1 w-1 rounded-full bg-ember-500 animate-pulse" />
+            Today's Desk
+          </span>
           <span className="hidden sm:inline">{today}</span>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-10 items-end">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_auto] gap-8 items-end">
           <div>
             <div className="eyebrow mb-3 animate-fade-in">
               Welcome back · <span className="text-ember-500">{user?.full_name || user?.username}</span>
@@ -169,8 +172,8 @@ export default function HomePage() {
             <h1
               className="font-display font-light text-parchment tracking-tightest animate-rise"
               style={{
-                fontSize: 'clamp(2.5rem, 6vw, 5.5rem)',
-                lineHeight: 0.9,
+                fontSize: 'clamp(2.25rem, 5.5vw, 4.75rem)',
+                lineHeight: 0.92,
                 animationDelay: '100ms',
                 fontVariationSettings: '"opsz" 144, "SOFT" 30',
               }}
@@ -183,7 +186,7 @@ export default function HomePage() {
             </h1>
 
             <p
-              className="mt-6 max-w-xl text-[15px] text-parchment-dim leading-relaxed animate-rise"
+              className="mt-5 max-w-xl text-[14px] text-parchment-dim leading-relaxed animate-rise"
               style={{ animationDelay: '250ms' }}
             >
               Today's desk: N-HiTS ensemble live on 48 assets, LightGBM classifier armed,
@@ -203,31 +206,36 @@ export default function HomePage() {
             </button>
           </div>
         </div>
-      </section>
 
-      {/* ── Desk tiles ── */}
-      <section className="py-10 border-b border-surface-border">
-        <div className="flex items-baseline justify-between mb-6">
-          <div>
-            <div className="eyebrow mb-1">Dispatches</div>
-            <h2 className="section-title mb-0">Choose your desk</h2>
-          </div>
-          <div className="hidden md:block font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint">
-            5 departments
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <DeskTile label="Predict"     desc="Unified N-HiTS + LightGBM forecasts on any asset, any horizon."  icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
-          <DeskTile label="Charts"      desc="Full indicator suite: RSI, MACD, Bollinger, correlation heatmaps." icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
-          <DeskTile label="Comparison"  desc="Back-test the ensemble. Rank models by MAPE, Sharpe, and hit-rate." icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
-          <DeskTile label="AI Insights" desc="Scanner across the entire universe. Signal scoring & ranking."     icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
-          <DeskTile label="Agent Desk"  desc="Paper-trading agents with equity curves and session telemetry."    icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
+        {/* Quick-stat strip — visual anchor under hero */}
+        <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-px bg-surface-border border border-surface-border animate-rise" style={{ animationDelay: '450ms' }}>
+          {[
+            { k: 'Models',   v: '07', sub: 'in ensemble' },
+            { k: 'Assets',   v: '48', sub: 'tracked live' },
+            { k: 'Latency',  v: '30s', sub: 'stream push' },
+            { k: 'Coverage', v: '24/7', sub: 'global desks' },
+          ].map(s => (
+            <div key={s.k} className="bg-surface-card/90 px-5 py-4">
+              <div className="eyebrow">{s.k}</div>
+              <div className="font-display text-2xl text-parchment mt-1 leading-none tabular-nums">{s.v}</div>
+              <div className="font-mono text-[10px] text-parchment-faint uppercase tracking-wider mt-1.5">{s.sub}</div>
+            </div>
+          ))}
         </div>
       </section>
 
       {/* ── Main grid: Movers + Sentiment ── */}
-      <section className="py-10 border-b border-surface-border">
+      <section className="py-8 border-b border-surface-border">
+        <div className="flex items-baseline justify-between mb-5">
+          <div>
+            <div className="eyebrow mb-1">Live Desk</div>
+            <h2 className="section-title mb-0">Market pulse</h2>
+          </div>
+          <div className="hidden md:flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint">
+            <span className="h-1 w-1 rounded-full bg-bull animate-pulse" />
+            Streaming
+          </div>
+        </div>
         <div className="grid grid-cols-1 lg:grid-cols-[1.6fr_1fr] gap-6">
 
           {/* Live movers — editorial leaderboard */}
@@ -312,10 +320,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Desk tiles ── */}
+      <section className="py-8 border-b border-surface-border">
+        <div className="flex items-baseline justify-between mb-5">
+          <div>
+            <div className="eyebrow mb-1">Dispatches</div>
+            <h2 className="section-title mb-0">Choose your desk</h2>
+          </div>
+          <div className="hidden md:block font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint">
+            5 departments
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <DeskTile label="Predict"     desc="Unified N-HiTS + LightGBM forecasts on any asset, any horizon."  icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
+          <DeskTile label="Charts"      desc="Full indicator suite: RSI, MACD, Bollinger, correlation heatmaps." icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
+          <DeskTile label="Comparison"  desc="Back-test the ensemble. Rank models by MAPE, Sharpe, and hit-rate." icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
+          <DeskTile label="AI Insights" desc="Scanner across the entire universe. Signal scoring & ranking."     icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
+          <DeskTile label="Agent Desk"  desc="Paper-trading agents with equity curves and session telemetry."    icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
+        </div>
+      </section>
+
       {/* ── Macro indicator cards ── */}
       {!macroLoading && macroIndicators && Object.keys(macroIndicators).length > 0 && (
-        <section className="py-10 border-b border-surface-border">
-          <div className="flex items-baseline justify-between mb-6">
+        <section className="py-8 border-b border-surface-border">
+          <div className="flex items-baseline justify-between mb-5">
             <div>
               <div className="eyebrow mb-1">Fixtures</div>
               <h2 className="section-title mb-0">Macro indicators</h2>
@@ -351,8 +380,8 @@ export default function HomePage() {
 
       {/* ── AI macro insights ── */}
       {!macroLoading && macroInsights.length > 0 && (
-        <section className="py-10 border-b border-surface-border">
-          <div className="flex items-baseline justify-between mb-6">
+        <section className="py-8 border-b border-surface-border">
+          <div className="flex items-baseline justify-between mb-5">
             <div>
               <div className="eyebrow mb-1">Editorial</div>
               <h2 className="section-title mb-0">Macro AI insights</h2>
@@ -381,8 +410,8 @@ export default function HomePage() {
       )}
 
       {/* ── News feed ── */}
-      <section className="py-10 border-b border-surface-border">
-        <div className="flex items-baseline justify-between mb-6">
+      <section className="py-8 border-b border-surface-border">
+        <div className="flex items-baseline justify-between mb-5">
           <div>
             <div className="eyebrow mb-1">Wires</div>
             <h2 className="section-title mb-0">From the market desk</h2>

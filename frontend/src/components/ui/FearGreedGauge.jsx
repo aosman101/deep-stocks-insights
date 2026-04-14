@@ -49,9 +49,14 @@ export default function FearGreedGauge({ value, classification, updated }) {
 
   return (
     <div className="card flex flex-col items-center gap-2">
-      <p className="text-xs text-gray-400 uppercase tracking-wider font-medium">Fear &amp; Greed Index</p>
+      <div className="flex items-center justify-between w-full">
+        <p className="eyebrow">Fear &amp; Greed</p>
+        <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-parchment-faint">
+          Sentiment
+        </p>
+      </div>
 
-      <svg viewBox="0 0 200 110" className="w-48 h-24">
+      <svg viewBox="0 0 200 110" className="w-52 h-28 mt-2">
         {/* Background arc segments */}
         {segments.map(seg => (
           <path
@@ -85,13 +90,19 @@ export default function FearGreedGauge({ value, classification, updated }) {
       </svg>
 
       {/* Value + label */}
-      <div className="text-center -mt-2">
-        <p className="text-3xl font-bold" style={{ color }}>{safeValue}</p>
-        <p className="text-sm font-semibold" style={{ color }}>{classification ?? 'Neutral'}</p>
+      <div className="text-center -mt-3">
+        <p className="font-display text-4xl font-light tabular-nums leading-none" style={{ color }}>
+          {safeValue}
+        </p>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] mt-1.5" style={{ color }}>
+          {classification ?? 'Neutral'}
+        </p>
       </div>
 
       {updated && (
-        <p className="text-xs text-gray-600">Updated: {updated}</p>
+        <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-parchment-faint mt-1">
+          Updated · {updated}
+        </p>
       )}
     </div>
   )

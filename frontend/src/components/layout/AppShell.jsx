@@ -11,12 +11,12 @@ export default function AppShell() {
       {/* Fixed grain overlay — covers entire viewport */}
       <div className="grain-overlay" />
 
-      {/* Ambient ember gradient — subtle, fixed */}
+      {/* Ambient cobalt gradient — subtle, fixed */}
       <div
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 50% 40% at 10% 0%, rgba(245,165,36,0.09), transparent 55%), radial-gradient(ellipse 60% 50% at 100% 100%, rgba(234,88,12,0.06), transparent 60%)',
+            'radial-gradient(ellipse 55% 45% at 8% 0%, rgba(59,130,246,0.09), transparent 58%), radial-gradient(ellipse 65% 55% at 100% 100%, rgba(37,99,235,0.06), transparent 62%)',
         }}
       />
 

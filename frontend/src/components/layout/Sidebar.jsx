@@ -51,23 +51,32 @@ export default function Sidebar({ open, onClose }) {
 
       {/* Sidebar */}
       <aside className={`
-        fixed inset-y-0 left-0 z-50 w-64 bg-surface-card/85 backdrop-blur-md
+        fixed inset-y-0 left-0 z-50 w-60 bg-surface-card/85 backdrop-blur-md
         border-r border-surface-border flex flex-col
         transform transition-transform duration-300 ease-out
         lg:relative lg:translate-x-0 lg:z-auto
         ${open ? 'translate-x-0' : '-translate-x-full'}
       `}>
         {/* Masthead */}
-        <div className="relative px-6 pt-7 pb-6 border-b border-surface-border">
+        <div className="relative px-5 pt-6 pb-5 border-b border-surface-border">
           <button
             onClick={onClose}
-            className="absolute right-4 top-4 lg:hidden p-1 text-parchment-muted hover:text-parchment"
+            className="absolute right-3 top-3 lg:hidden p-1 text-parchment-muted hover:text-parchment"
           >
             <X className="w-4 h-4" />
           </button>
 
+          <div className="flex items-center gap-2.5 mb-1">
+            <div className="relative flex h-7 w-7 items-center justify-center border border-ember-500/60">
+              <div className="h-1.5 w-1.5 bg-ember-500 animate-pulse" />
+            </div>
+            <div className="font-mono text-[9px] uppercase tracking-[0.22em] text-parchment-muted">
+              Research Terminal
+            </div>
+          </div>
+
           <div
-            className="font-display font-light text-[26px] leading-[0.95] text-parchment tracking-tight"
+            className="font-display font-light text-[22px] leading-[0.95] text-parchment tracking-tight mt-3"
             style={{ fontVariationSettings: '"opsz" 144, "SOFT" 40' }}
           >
             Deep Stock
