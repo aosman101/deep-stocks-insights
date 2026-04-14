@@ -181,6 +181,30 @@ const TRADING_CONCEPTS = [
         heading: 'Limitations & Caveats',
         text: 'ML models are trained on historical data and assume the future will resemble the past. They cannot predict black swan events, regulatory changes, or sudden shifts in market structure. Models can overfit to noise, especially with limited training data. Always combine model outputs with fundamental analysis and risk management — no model is infallible.',
       },
+      {
+        heading: 'LSTM (Long Short-Term Memory)',
+        text: 'LSTMs are recurrent neural networks designed to remember long sequences without the "vanishing gradient" problem of vanilla RNNs. They use three gates (forget, input, output) to control what information persists. In finance, LSTMs excel at capturing sequence dependencies in OHLCV data — recognising that a 3-day pullback within an uptrend is structurally different from a 3-day crash. Deep Stock Insights uses LSTMs as a baseline architecture against which N-HiTS is compared.',
+      },
+      {
+        heading: 'Temporal Fusion Transformer (TFT)',
+        text: 'TFT combines the attention mechanism from Transformers with LSTM encoders to handle multi-horizon forecasting with both static and time-varying features. Its key innovation is interpretability — TFT produces attention weights showing WHICH historical timestamps and WHICH features drove each prediction. For a stock forecast, you can see "the model is paying 40% attention to the VIX spike 5 days ago."',
+      },
+      {
+        heading: 'Feature Engineering',
+        text: 'Raw OHLCV data is rarely fed directly into models. Engineered features dramatically improve performance: returns (instead of prices), log returns (for normality), rolling volatility, price relative to moving averages, regime indicators (bull/bear flags), calendar features (day-of-week, month-end effects), and cross-asset signals (BTC price for Ethereum model). Feature selection via SHAP values identifies which inputs actually matter.',
+      },
+      {
+        heading: 'Walk-Forward Validation',
+        text: 'Standard k-fold cross-validation leaks future information into training and gives misleadingly optimistic results. Walk-forward validation trains on [2010-2015], validates on 2016; then trains on [2010-2016], validates on 2017; and so on. This mimics how the model would actually be deployed. A strategy that looks great on standard CV but breaks on walk-forward is overfit — a very common failure mode.',
+      },
+      {
+        heading: 'Regime Detection',
+        text: 'Markets cycle through regimes: trending, mean-reverting, high-volatility, low-volatility. A single model rarely performs well across all regimes. Advanced systems use Hidden Markov Models (HMM) or rule-based classifiers to detect the current regime, then apply a specialist model. Simple proxies: VIX > 25 = high-vol regime; ADX > 25 = trending; ADX < 20 = range-bound.',
+      },
+      {
+        heading: 'Ensemble Methods',
+        text: 'Why Deep Stock Insights uses an ensemble: no single model is best in all conditions. N-HiTS excels at smooth trends; LightGBM captures nonlinear feature interactions; TFT handles regime shifts. Simple averaging, weighted voting, or stacking (meta-model that learns which base model to trust when) all outperform any individual component. The diversity of errors matters more than individual accuracy.',
+      },
     ],
   },
   {
@@ -369,43 +393,102 @@ const TRADING_CONCEPTS = [
         heading: 'The Disposition Effect',
         text: 'Selling winners too early and holding losers too long — the exact opposite of what\'s optimal. Studies show retail traders do this consistently. Research by Odean (1998) found individual investors sell winners 50% more often than losers. Professional traders deliberately track and fight this tendency.',
       },
+      {
+        heading: 'Overconfidence & the Dunning-Kruger Curve',
+        text: 'After 3-6 months of paper trading profits, most new traders believe they\'ve "figured it out." This is peak overconfidence — and peak danger when real money is deployed. Barber & Odean (2001) found that active male traders underperform by 2.65% annually vs buy-and-hold, largely due to overtrading. Staying humble and documenting every trade with expected vs actual outcome protects against this.',
+      },
+      {
+        heading: 'Herding & Social Proof',
+        text: 'Humans are wired to copy the crowd — useful when avoiding lions, deadly in markets. When "everyone" is bullish on a stock (retail forums, CNBC talking heads, cab drivers), the upside is usually already priced in. Contrarians like Buffett ("be fearful when others are greedy") make their biggest profits when consensus is most extreme. The AAII Sentiment Survey and put/call ratio quantify herd positioning.',
+      },
+    ],
+  },
+  {
+    id: 'quantitative-strategies',
+    title: 'Quantitative Strategies',
+    icon: Sigma,
+    color: 'text-teal-400',
+    bg: 'bg-teal-500/10 border-teal-500/20',
+    summary: 'Systematic strategies used by hedge funds and prop desks.',
+    content: [
+      {
+        heading: 'Momentum Factor',
+        text: 'One of the most robust anomalies in finance: past winners tend to keep winning over 3-12 month horizons. Jegadeesh & Titman (1993) showed a long-short strategy buying top decile / shorting bottom decile of past 12-month returns generated ~1% monthly alpha. Caveat: momentum crashes violently during trend reversals (e.g., March 2009, March 2020). Modern implementations combine momentum with volatility scaling to reduce these crashes.',
+      },
+      {
+        heading: 'Value Factor',
+        text: 'Fama-French\'s HML (High Minus Low book-to-market): buying cheap stocks and shorting expensive ones. Historical excess return ~4% annualised. The 2010s were brutal for value (growth dominated), but 2021-2024 saw a partial mean reversion. Modern "quality value" approaches combine low valuation with high profitability (ROIC, gross margins) to avoid "value traps" — stocks cheap for good reasons.',
+      },
+      {
+        heading: 'Statistical Arbitrage',
+        text: 'Stat arb finds temporary price dislocations between related securities. Classic example: cointegration between two stocks in the same industry. Fit a linear combination that is mean-reverting, enter when the spread widens 2 std devs, exit at mean. Profits are small per trade but can be done thousands of times. Renaissance Technologies\' Medallion Fund (66% annual gross returns 1988-2018) runs an industrial-scale version.',
+      },
+      {
+        heading: 'Low Volatility Anomaly',
+        text: 'Empirically, low-volatility stocks outperform high-volatility stocks on a risk-adjusted basis — contradicting CAPM. Possible explanations: leverage constraints force institutions into high-vol stocks (pushing their prices up, returns down), lottery preference (retail pays up for lottery-ticket stocks). The iShares Min Vol ETF (USMV) captures this factor; it has beaten SPY by ~1% annually with 30% less volatility.',
+      },
+      {
+        heading: 'Carry Trade',
+        text: 'Borrow in a low-yielding currency/asset, invest in a high-yielding one, pocket the spread. Classic FX version: borrow JPY at 0%, buy AUD at 4%, earn 4% annually plus any currency appreciation. Risk: sudden reversals can wipe out years of carry in days (Swiss Franc shock 2015 destroyed years of EUR/CHF carry in 20 minutes). Crypto version: earn funding rate by shorting perpetuals when funding is positive.',
+      },
+      {
+        heading: 'Pairs Trading (Cointegration)',
+        text: 'Instead of betting on direction, bet on RELATIVE performance. Coca-Cola and Pepsi have moved together for decades. When KO / PEP ratio deviates 2 std devs from its 60-day mean, go long the laggard and short the leader, expecting reversion. Engle-Granger or Johansen tests statistically confirm cointegration. Market-neutral: you don\'t care if stocks rally or crash, only whether the spread reverts.',
+      },
+      {
+        heading: 'Volatility Targeting',
+        text: 'Fixed-notional strategies blow up when volatility spikes. Volatility-targeted strategies scale position size inversely to recent volatility — when vol is high, positions shrink; when low, positions grow. This dramatically smooths equity curves. Implementation: scale daily by (target_vol / realised_vol), clipped at some max leverage. Managed Futures CTAs and risk-parity funds all use variants of this approach.',
+      },
+      {
+        heading: 'Execution Alpha',
+        text: 'Even a 5% annual edge is wiped out by poor execution. TWAP (time-weighted) and VWAP algorithms slice large orders into small pieces to minimise market impact. Iceberg orders hide size. Smart Order Routing splits across venues. For retail: always use limit orders, avoid the first and last 15 minutes of the session (chaotic), and pay attention to bid-ask spreads on illiquid names.',
+      },
+    ],
+  },
+  {
+    id: 'trading-plan',
+    title: 'Building a Trading Plan',
+    icon: Target,
+    color: 'text-lime-400',
+    bg: 'bg-lime-500/10 border-lime-500/20',
+    summary: 'A written plan is what separates a strategy from guessing.',
+    content: [
+      {
+        heading: 'Define Your Edge',
+        text: 'Before risking capital, write down WHY your strategy should work. "Momentum stocks tend to continue 3-6 months" is an edge. "I have a good feeling about Tesla" is not. Your edge must be defensible, measurable, and ideally backed by academic research or long-term backtest data (20+ years if possible).',
+      },
+      {
+        heading: 'Entry Criteria',
+        text: 'Specify exact, unambiguous entry rules. "Buy AAPL when it\'s cheap" is not a rule. "Buy AAPL when RSI(14) < 30 AND price > 200-day SMA AND VIX < 25" is a rule. If a rule can\'t be automated, it\'s too vague. Force yourself to precision — ambiguity is where emotion and bias creep in.',
+      },
+      {
+        heading: 'Exit Criteria (Both Directions)',
+        text: 'Before entering, define BOTH your stop-loss and your take-profit levels. Common frameworks: fixed % stop (-2%), ATR-based stop (1.5x ATR), time-based exit (close after 10 days regardless). Profit targets: fixed R:R (2:1 or 3:1), trailing stop that tightens as price rises, or scale-out (sell 1/3 at 1R, 1/3 at 2R, 1/3 at 3R).',
+      },
+      {
+        heading: 'Position Sizing Formula',
+        text: 'Position size = (Account × Risk per trade) / (Entry − Stop). If your $10k account risks 1% per trade ($100) and your stop is $5 below your $100 entry, position size = $100 / $5 = 20 shares = $2,000 position. This keeps every trade standardised regardless of volatility. Higher-volatility names automatically get smaller positions.',
+      },
+      {
+        heading: 'Trading Journal',
+        text: 'Every trade must be logged: date, ticker, direction, entry, stop, target, size, reasoning, emotional state, and outcome. Review monthly to find patterns: "I overtrade on Fridays," "I size up after wins," "My tech sector trades underperform." Without a journal, you can\'t improve — you\'ll repeat the same mistakes for years.',
+      },
+      {
+        heading: 'Pre-Trade Checklist',
+        text: 'Before every entry, run a checklist: (1) Does this setup match my rules exactly? (2) Is position size within limits? (3) Is stop-loss placed BEFORE entering? (4) Am I emotional (revenge, FOMO, overconfidence)? (5) What is the catalyst — earnings, Fed meeting, news — that could invalidate this in the next 48h? If any answer is uncertain, skip the trade.',
+      },
+      {
+        heading: 'Review & Iterate',
+        text: 'Monthly review: calculate win rate, average win, average loss, expectancy (win_rate × avg_win − loss_rate × avg_loss), max drawdown, Sharpe ratio. Compare to your strategy\'s backtest. If live performance significantly lags backtest after 30+ trades, something is wrong — execution, slippage, or the edge has decayed. Quarterly: honestly ask whether the strategy still works in current market conditions.',
+      },
+      {
+        heading: 'Trading Psychology Rules',
+        text: 'Write 5-10 rules on a card next to your monitor. Examples: "I never add to losers." "I never remove a stop-loss." "I never trade without a plan." "I never revenge-trade after a loss." "I walk away after 3 consecutive losses." Rules prevent in-the-moment rationalisation. Professional poker players, athletes, and traders all use explicit rules as cognitive guardrails.',
+      },
     ],
   },
 ]
 
-// ─── Glossary — quick-lookup terms ──────────────────────────
-const GLOSSARY = [
-  { term: 'Alpha', def: 'Excess return above a benchmark, adjusted for risk. A strategy with 2% alpha beats the S&P 500 by 2% annually after accounting for market exposure.' },
-  { term: 'Backtesting', def: 'Running a trading strategy on historical data to estimate how it would have performed. Prone to overfitting if not done carefully.' },
-  { term: 'Basis Point (bp)', def: '1/100th of 1%. A 25bp rate hike = 0.25%. Common in rates, spreads, and fees.' },
-  { term: 'Beta', def: 'Sensitivity to the broader market. Beta 1.0 = moves with the market; 2.0 = twice as volatile; 0.5 = half as volatile.' },
-  { term: 'Black Swan', def: 'An unpredictable, high-impact event (Nassim Taleb). Examples: 2008 crash, COVID-19, FTX collapse.' },
-  { term: 'Candlestick', def: 'Price chart showing open, high, low, close (OHLC) for a period. Green = close above open; red = close below open.' },
-  { term: 'Circuit Breaker', def: 'Automatic trading halts triggered by severe price drops. NYSE halts at −7%, −13%, −20% moves from prior close.' },
-  { term: 'Dead Cat Bounce', def: 'A temporary recovery during a sustained downtrend that fails to reverse the trend.' },
-  { term: 'Hash Rate', def: 'Total computational power securing a Proof of Work blockchain. Rising hash = rising miner confidence.' },
-  { term: 'Leverage', def: 'Borrowed capital to amplify position size. 10x leverage means a 10% adverse move liquidates you.' },
-  { term: 'Liquidity', def: 'How easily an asset can be bought/sold without moving price. High volume + tight spreads = high liquidity.' },
-  { term: 'Long / Short', def: 'Long = bet price rises. Short = bet price falls by borrowing and selling, then rebuying lower.' },
-  { term: 'Margin Call', def: 'Broker demand for more collateral when leveraged position loses value. Ignore it = forced liquidation.' },
-  { term: 'Market Cap', def: 'Total value of outstanding shares/tokens. Price × circulating supply.' },
-  { term: 'Moat', def: 'Competitive advantage that protects long-term profitability (brand, network effects, patents, switching costs).' },
-  { term: 'Quant', def: 'Quantitative trader/researcher who uses mathematical models and code (not intuition) to make decisions.' },
-  { term: 'Short Squeeze', def: 'Rapid price rise that forces short sellers to buy back shares at higher prices, accelerating the rally (GME 2021).' },
-  { term: 'Whale', def: 'Holder large enough to move markets. BTC addresses with 1,000+ BTC are tracked closely by analysts.' },
-  { term: 'Yield Curve', def: 'Plot of bond yields across maturities. Inversion (short rates > long rates) has preceded every US recession since 1955.' },
-  { term: 'Z-Score', def: 'How many standard deviations a value is from the mean. ±2 = unusual; ±3 = extreme. Used in mean-reversion signals.' },
-]
-
-// ─── Market session hours ──────────────────────────────────
-const MARKET_SESSIONS = [
-  { market: 'New York (NYSE/NASDAQ)',  hours: '09:30 – 16:00 ET',    local: '14:30 – 21:00 UTC', notes: 'Highest US equity volume. Opening 30 min and closing hour dominate daily volume.' },
-  { market: 'London (LSE)',            hours: '08:00 – 16:30 GMT',   local: '08:00 – 16:30 UTC', notes: 'Overlaps with NY 13:30–16:30 — highest global FX liquidity.' },
-  { market: 'Tokyo (TSE)',             hours: '09:00 – 15:00 JST',   local: '00:00 – 06:00 UTC', notes: 'Asian session leader. JPY, Nikkei most active.' },
-  { market: 'Hong Kong (HKEX)',        hours: '09:30 – 16:00 HKT',   local: '01:30 – 08:00 UTC', notes: 'China-exposure proxy. Overlaps late Tokyo session.' },
-  { market: 'Crypto (24/7)',           hours: 'Always open',         local: '—',                 notes: 'Weekend moves often amplified by low liquidity. Funding rates reset every 8h.' },
-  { market: 'CME Futures',             hours: '18:00 Sun – 17:00 Fri ET', local: '~23:00 – 22:00 UTC', notes: 'Overnight index futures (ES, NQ) lead US cash open. Gaps signal overnight risk.' },
-]
 
 // ─── Accordion section ──────────────────────────────────────
 function ConceptSection({ concept, isOpen, onToggle }) {
@@ -488,7 +571,6 @@ export default function LearnPage() {
   const [macro, setMacro] = useState(null)
   const [fng, setFng] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [glossaryQuery, setGlossaryQuery] = useState('')
 
   useEffect(() => {
     const fetchData = async () => {
@@ -534,13 +616,6 @@ export default function LearnPage() {
 
   const fngValue = fng?.value ?? fng?.data?.[0]?.value ?? null
   const fngClass = fng?.classification ?? fng?.value_classification ?? fng?.data?.[0]?.value_classification ?? null
-
-  const filteredGlossary = glossaryQuery.trim()
-    ? GLOSSARY.filter(g =>
-        g.term.toLowerCase().includes(glossaryQuery.toLowerCase()) ||
-        g.def.toLowerCase().includes(glossaryQuery.toLowerCase())
-      )
-    : GLOSSARY
 
   return (
     <div className="max-w-5xl mx-auto space-y-8">
@@ -651,38 +726,6 @@ export default function LearnPage() {
             )}
           </div>
         )}
-      </section>
-
-      {/* ── Market Session Hours ────────────────────────────── */}
-      <section>
-        <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <Clock className="w-4 h-4 text-accent-blue" />
-          Global Market Sessions
-        </h2>
-        <div className="card p-0 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-400 border-b border-surface-border bg-surface-hover/40">
-                  <th className="px-4 py-2.5 font-medium">Market</th>
-                  <th className="px-4 py-2.5 font-medium">Local Hours</th>
-                  <th className="px-4 py-2.5 font-medium hidden md:table-cell">UTC</th>
-                  <th className="px-4 py-2.5 font-medium">Notes</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MARKET_SESSIONS.map((s, i) => (
-                  <tr key={i} className="border-b border-surface-border/40 last:border-0 hover:bg-surface-hover/30 transition-colors">
-                    <td className="px-4 py-2.5 font-medium text-white">{s.market}</td>
-                    <td className="px-4 py-2.5 text-gray-300 font-mono text-xs">{s.hours}</td>
-                    <td className="px-4 py-2.5 text-gray-400 font-mono text-xs hidden md:table-cell">{s.local}</td>
-                    <td className="px-4 py-2.5 text-gray-400 text-xs">{s.notes}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
       </section>
 
       {/* ── Trading Education ───────────────────────────────── */}
