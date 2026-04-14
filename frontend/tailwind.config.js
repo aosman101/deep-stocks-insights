@@ -5,19 +5,20 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Cloud & Cobalt — cool cloud + midnight slate + cobalt
+        // Graphite & Cobalt — layered dark slate + cobalt
         surface: {
-          DEFAULT: '#f1f5f9',   // cool cloud
-          card:    '#ffffff',   // paper white
-          hover:   '#e2e8f0',   // overcast
-          border:  '#cbd5e1',   // steel hairline
-          ring:    '#94a3b8',   // pale steel ring
+          DEFAULT: '#0b0f17',   // graphite base
+          card:    '#141a24',   // raised panel
+          hover:   '#1c2430',   // hover / elevated
+          deep:    '#0a0e16',   // deepest well
+          border:  '#232b38',   // hairline
+          ring:    '#3a4557',   // steel ring
         },
         parchment: {
-          DEFAULT: '#0f172a',   // midnight slate (primary text)
-          dim:     '#334155',   // iron
-          muted:   '#64748b',   // mist
-          faint:   '#94a3b8',   // pale steel
+          DEFAULT: '#e5e9f0',   // primary text (cool white)
+          dim:     '#c5ccd8',   // dimmed
+          muted:   '#9ca8b8',   // muted grey-blue
+          faint:   '#5a6578',   // faint
         },
         // Backwards-compat aliases (existing pages use these)
         accent: {
@@ -29,9 +30,9 @@ export default {
           purple: '#8b5cf6',    // accent variety
         },
         ink: {
-          DEFAULT: '#0f172a',
-          dim:     '#334155',
-          muted:   '#64748b',
+          DEFAULT: '#e5e9f0',
+          dim:     '#c5ccd8',
+          muted:   '#9ca8b8',
         },
         ember: {
           50:  '#eff6ff',
@@ -71,15 +72,15 @@ export default {
         'display-xl': ['8rem',    { lineHeight: '0.85', letterSpacing: '-0.05em' }],
       },
       boxShadow: {
-        'inset-border': 'inset 0 0 0 1px rgba(15, 23, 42, 0.06)',
-        'ember-glow':   '0 0 40px -8px rgba(59, 130, 246, 0.38)',
-        'card':         '0 1px 2px 0 rgba(15,23,42,0.04), 0 8px 28px -14px rgba(15,23,42,0.18)',
-        'card-hover':   '0 1px 2px 0 rgba(15,23,42,0.06), 0 20px 50px -18px rgba(59,130,246,0.28)',
+        'inset-border': 'inset 0 0 0 1px rgba(255, 255, 255, 0.04)',
+        'ember-glow':   '0 0 40px -8px rgba(59, 130, 246, 0.48)',
+        'card':         'inset 0 1px 0 0 rgba(255,255,255,0.03), 0 8px 28px -14px rgba(0,0,0,0.65)',
+        'card-hover':   'inset 0 1px 0 0 rgba(255,255,255,0.05), 0 20px 50px -18px rgba(59,130,246,0.35)',
       },
       backgroundImage: {
-        'grain':        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.08 0 0 0 0 0.12 0 0 0 0 0.22 0 0 0 0.08 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(59,130,246,0.12), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(37,99,235,0.08), transparent 60%)',
-        'scanlines':    'repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(15,23,42,0.022) 2px, rgba(15,23,42,0.022) 3px)',
+        'grain':        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
+        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(59,130,246,0.14), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(37,99,235,0.10), transparent 60%)',
+        'scanlines':    'repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 3px)',
       },
       animation: {
         'pulse-slow':  'pulse 3s cubic-bezier(0.4,0,0.6,1) infinite',

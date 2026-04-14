@@ -16,7 +16,7 @@ export default function AppShell() {
         className="pointer-events-none fixed inset-0 z-0"
         style={{
           backgroundImage:
-            'radial-gradient(ellipse 55% 45% at 8% 0%, rgba(59,130,246,0.09), transparent 58%), radial-gradient(ellipse 65% 55% at 100% 100%, rgba(37,99,235,0.06), transparent 62%)',
+            'radial-gradient(ellipse 55% 45% at 8% 0%, rgba(59,130,246,0.16), transparent 60%), radial-gradient(ellipse 65% 55% at 100% 100%, rgba(37,99,235,0.12), transparent 62%), radial-gradient(ellipse 40% 30% at 50% 40%, rgba(96,165,250,0.05), transparent 70%)',
         }}
       />
 

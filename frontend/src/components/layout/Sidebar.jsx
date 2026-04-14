@@ -44,7 +44,7 @@ export default function Sidebar({ open, onClose }) {
       {/* Mobile backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-40 bg-surface/80 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
@@ -156,7 +156,7 @@ export default function Sidebar({ open, onClose }) {
             onClick={handleNav}
             className="flex items-center gap-3 group"
           >
-            <div className="relative flex h-9 w-9 items-center justify-center border border-surface-ring bg-surface">
+            <div className="relative flex h-9 w-9 items-center justify-center border border-surface-ring bg-surface-deep">
               <User className="w-4 h-4 text-parchment-dim group-hover:text-ember-500 transition-colors" />
               <div className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-bull ring-2 ring-surface-card" />
             </div>

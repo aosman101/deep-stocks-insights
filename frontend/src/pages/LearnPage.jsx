@@ -5,6 +5,8 @@ import {
   BookOpen, TrendingUp, TrendingDown, Globe, BarChart2,
   ShieldAlert, Target, Brain, Layers, ChevronDown, ChevronUp,
   DollarSign, Activity, Gauge, ArrowUpRight, ArrowDownRight,
+  Clock, Coins, Scale, AlertTriangle, Calculator, Network,
+  Search, BookMarked,
 } from 'lucide-react'
 
 // ─── Trading concepts data ──────────────────────────────────
