@@ -189,7 +189,7 @@ export default function HomePage() {
               className="mt-5 max-w-xl text-[14px] text-parchment-dim leading-relaxed animate-rise"
               style={{ animationDelay: '250ms' }}
             >
-              Live quotes, macro context, and the fastest routes into forecasts, charts, and scanner signals.
+              Live quotes, macro context, and the fastest routes into forecasts, charts, and scanner signals so you can move from market read to decision quickly.
             </p>
           </div>
 
@@ -332,11 +332,11 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-          <DeskTile label="Predict"     desc="Multi-model forecasts across supported assets and horizons." icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
-          <DeskTile label="Charts"      desc="Price action, indicators, and correlation views."             icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
-          <DeskTile label="Comparison"  desc="Rank models by accuracy, drawdown, and risk-adjusted return." icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
-          <DeskTile label="AI Insights" desc="Scanner signals and sentiment across the market."              icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
-          <DeskTile label="Agent Desk"  desc="Track paper-trading sessions, equity curves, and telemetry."  icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
+          <DeskTile label="Predict"     desc="Multi-model forecasts with directional view, levels, and confidence context." icon={TrendingUp} onClick={() => navigate('/predict')}       delay={100} />
+          <DeskTile label="Charts"      desc="Price action, indicators, overlays, and correlation views in one workspace."  icon={Activity}  onClick={() => navigate('/graph-analysis')} delay={180} />
+          <DeskTile label="Comparison"  desc="Rank models by accuracy, drawdown, and risk-adjusted return over time."       icon={BarChart2}  onClick={() => navigate('/comparison')}     delay={260} />
+          <DeskTile label="AI Insights" desc="Scanner signals, sentiment, and ranked setups across the market."             icon={Zap}        onClick={() => navigate('/ai-insights')}    delay={340} />
+          <DeskTile label="Agent Desk"  desc="Track paper-trading sessions, equity curves, telemetry, and execution flow." icon={Bot}        onClick={() => navigate('/agent')}          delay={420} />
         </div>
       </section>
 

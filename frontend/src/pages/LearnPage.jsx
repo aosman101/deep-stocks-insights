@@ -27,19 +27,19 @@ const TRADING_CONCEPTS = [
     icon: Layers,
     color: 'text-emerald-400',
     bg: 'bg-emerald-500/10 border-emerald-500/20',
-    summary: 'Start with regime, trend, and macro before worrying about entries.',
+    summary: 'Start with regime, trend, and macro before worrying about precise entries.',
     content: [
       {
         heading: 'Regime First',
-        text: 'Decide whether the asset is trending, ranging, or breaking down. Trend tools work best in directional markets; oscillators work better when price is rotating inside a range.',
+        text: 'Decide whether the asset is trending, ranging, or breaking down. Trend tools work best in directional markets; oscillators work better when price is rotating inside a range. Misreading regime is one of the fastest ways to misuse a good setup.',
       },
       {
         heading: 'Top-Down Structure',
-        text: 'Read the higher timeframe first, then drop down for execution. Daily trend, 4H structure, and 1H trigger is usually more reliable than reacting only to intraday noise.',
+        text: 'Read the higher timeframe first, then drop down for execution. Daily trend, 4H structure, and 1H trigger is usually more reliable than reacting only to intraday noise because the lower timeframe should serve the bigger picture, not override it.',
       },
       {
         heading: 'Macro Matters',
-        text: 'Rates, inflation, dollar strength, and volatility set the backdrop. Strong DXY or rising yields can pressure growth assets even when the chart still looks healthy.',
+        text: 'Rates, inflation, dollar strength, and volatility set the backdrop. Strong DXY or rising yields can pressure growth assets even when the chart still looks healthy, while falling volatility and stable yields usually create better conditions for trend continuation.',
       },
     ],
   },
@@ -49,19 +49,19 @@ const TRADING_CONCEPTS = [
     icon: BarChart2,
     color: 'text-accent-blue',
     bg: 'bg-accent-blue/10 border-accent-blue/20',
-    summary: 'Use a few tools well: trend, momentum, volatility, and key levels.',
+    summary: 'Use a few tools well: trend, momentum, volatility, and levels.',
     content: [
       {
         heading: 'Trend + Momentum',
-        text: 'Moving averages tell you direction; RSI and MACD help gauge pace. A setup is stronger when trend and momentum agree instead of fighting each other.',
+        text: 'Moving averages tell you direction; RSI and MACD help gauge pace. A setup is stronger when trend and momentum agree instead of fighting each other. If price is trending up but momentum is fading hard, conviction should usually come down.',
       },
       {
         heading: 'Support, Resistance, Volume',
-        text: 'Levels matter more when they have repeated reactions and strong participation. Breakouts without volume are easier to fade; breakouts with volume are easier to trust.',
+        text: 'Levels matter more when they have repeated reactions and strong participation. Breakouts without volume are easier to fade; breakouts with volume are easier to trust. The best levels often line up with prior highs and lows, moving averages, or heavy trading zones.',
       },
       {
         heading: 'Confirmation Over Prediction',
-        text: 'Candles and patterns are context tools, not guarantees. A hammer at support in an uptrend is useful; the same candle in the middle of a messy range is weak information.',
+        text: 'Candles and patterns are context tools, not guarantees. A hammer at support in an uptrend is useful; the same candle in the middle of a messy range is weak information. Location matters more than the candle name.',
       },
     ],
   },
@@ -71,19 +71,19 @@ const TRADING_CONCEPTS = [
     icon: ShieldAlert,
     color: 'text-amber-400',
     bg: 'bg-amber-500/10 border-amber-500/20',
-    summary: 'Edge survives only if sizing, stops, and drawdown control are disciplined.',
+    summary: 'Edge survives only if sizing, stops, and drawdown control stay disciplined.',
     content: [
       {
         heading: 'Position Size Before Entry',
-        text: 'Risk the amount you are willing to lose first, then calculate size from stop distance. Small consistent losses are manageable; oversized trades destroy good systems.',
+        text: 'Risk the amount you are willing to lose first, then calculate size from stop distance. Small consistent losses are manageable; oversized trades destroy good systems. Good analysis with bad sizing still leads to bad outcomes.',
       },
       {
         heading: 'Use Volatility-Aware Stops',
-        text: 'ATR-based stops are usually better than arbitrary percentages. If an asset regularly swings 3% a day, a 1% stop is often just noise.',
+        text: 'ATR-based stops are usually better than arbitrary percentages. If an asset regularly swings 3% a day, a 1% stop is often just noise. Your stop should invalidate the idea, not simply sit close to price.',
       },
       {
         heading: 'Protect the Equity Curve',
-        text: 'Max drawdown matters more than a single winning trade. A strategy that compounds steadily with shallow drawdowns is more durable than one with occasional huge wins.',
+        text: 'Max drawdown matters more than a single winning trade. A strategy that compounds steadily with shallow drawdowns is more durable than one with occasional huge wins, because survival is what gives an edge time to work.',
       },
     ],
   },
@@ -97,15 +97,15 @@ const TRADING_CONCEPTS = [
     content: [
       {
         heading: 'What The Models Do',
-        text: 'N-HiTS is strong for multi-horizon time-series forecasting, LightGBM is fast and good with engineered features, and ensembles work because different models fail in different ways.',
+        text: 'N-HiTS is strong for multi-horizon time-series forecasting, LightGBM is fast and good with engineered features, and ensembles work because different models fail in different ways. The point of the stack is robustness, not pretending one model sees everything.',
       },
       {
         heading: 'Validate Properly',
-        text: 'Walk-forward testing is the standard because it preserves time order. If validation leaks the future, backtest quality is overstated and the live result disappoints.',
+        text: 'Walk-forward testing is the standard because it preserves time order. If validation leaks the future, backtest quality is overstated and the live result disappoints. In markets, realism in testing matters more than headline accuracy.',
       },
       {
         heading: 'Confidence Is A Range',
-        text: 'Prediction intervals matter as much as the central forecast. Wide bands mean low conviction and usually argue for smaller size or no trade.',
+        text: 'Prediction intervals matter as much as the central forecast. Wide bands mean low conviction and usually argue for smaller size or no trade, while narrow bands are more useful only if the model has earned that confidence historically.',
       },
     ],
   },
@@ -115,19 +115,19 @@ const TRADING_CONCEPTS = [
     icon: Target,
     color: 'text-rose-400',
     bg: 'bg-rose-500/10 border-rose-500/20',
-    summary: 'Keep execution styles simple and aligned to the market regime.',
+    summary: 'Keep execution styles simple and aligned to the current regime.',
     content: [
       {
         heading: 'Trend Following',
-        text: 'Best when price is above major moving averages and ADX is rising. The goal is not to buy the bottom but to stay with strength while trailing risk.',
+        text: 'Best when price is above major moving averages and ADX is rising. The goal is not to buy the bottom but to stay with strength while trailing risk. You are paying for confirmation, not trying to look clever.',
       },
       {
         heading: 'Mean Reversion',
-        text: 'Best when price is stretched inside a range and momentum is exhausted. Use it carefully in strong trends because oversold can stay oversold.',
+        text: 'Best when price is stretched inside a range and momentum is exhausted. Use it carefully in strong trends because oversold can stay oversold and overbought can stay overbought much longer than expected.',
       },
       {
         heading: 'Breakout And DCA',
-        text: 'Breakouts need confirmation and follow-through; DCA is better for long-term accumulation where timing precision matters less than consistency.',
+        text: 'Breakouts need confirmation and follow-through; DCA is better for long-term accumulation where timing precision matters less than consistency. Different playbooks solve different problems, so forcing one style onto every market usually hurts results.',
       },
     ],
   },
@@ -152,42 +152,63 @@ const MARKET_CHECKLIST = [
   },
 ]
 
+const MARKET_INTERPRETATION = [
+  {
+    title: 'Risk-On',
+    text: 'Falling VIX, stable yields, softer dollar, and clean breakouts usually support growth assets and crypto.',
+  },
+  {
+    title: 'Risk-Off',
+    text: 'Rising VIX, stronger dollar, widening credit stress, and failed breakouts often push traders toward defense and cash.',
+  },
+  {
+    title: 'Wait Conditions',
+    text: 'Mixed macro, low-conviction price action, and choppy indicators are usually a signal to reduce size rather than force a trade.',
+  },
+]
+
 const CORE_INDICATORS = [
   {
     name: '50 / 200 SMA',
     use: 'Primary trend filter',
     bullish: '50 above 200, price holds above both',
     bearish: '50 below 200, rallies fail under both',
+    note: 'Best on higher timeframes',
   },
   {
     name: 'RSI (14)',
     use: 'Momentum and exhaustion',
     bullish: 'Reclaims 50 or turns up from oversold',
     bearish: 'Loses 50 or rolls over from overbought',
+    note: 'Divergences matter near key levels',
   },
   {
     name: 'MACD',
     use: 'Momentum confirmation',
     bullish: 'MACD crosses above signal with expanding histogram',
     bearish: 'MACD crosses below signal with weakening histogram',
+    note: 'Works better with trend context',
   },
   {
     name: 'Bollinger Bands',
     use: 'Volatility and stretch',
     bullish: 'Rebound from lower band in healthy uptrend',
     bearish: 'Rejection from upper band in healthy downtrend',
+    note: 'Squeeze often precedes expansion',
   },
   {
     name: 'ADX (14)',
     use: 'Trend strength',
     bullish: 'Above 25 with +DI leading',
     bearish: 'Above 25 with -DI leading',
+    note: 'Below 20 often means chop',
   },
   {
     name: 'ATR (14)',
     use: 'Risk and stop placement',
     bullish: 'Rising ATR can validate a directional move',
     bearish: 'ATR spike after extension can warn of exhaustion',
+    note: 'Use for sizing more than direction',
   },
 ]
 
@@ -358,7 +379,7 @@ export default function LearnPage() {
           Learn & Markets
         </h1>
         <p className="text-gray-400 text-sm mt-1 max-w-3xl">
-          A condensed market briefing: live context, the core concepts that matter, and the minimum indicator set worth knowing.
+          A condensed market briefing with enough explanation to teach: live context, the core concepts that matter, and a practical indicator set you can actually use.
         </p>
       </div>
 
@@ -492,6 +513,24 @@ export default function LearnPage() {
         </div>
       </section>
 
+      <section className="card">
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-accent-blue" />
+          What The Backdrop Usually Means
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          A quick interpretation layer for the live market and macro cards above.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          {MARKET_INTERPRETATION.map((item) => (
+            <div key={item.title} className="rounded-lg border border-surface-border bg-surface/50 p-4">
+              <h3 className="text-sm font-semibold text-white mb-1">{item.title}</h3>
+              <p className="text-sm text-gray-300 leading-relaxed">{item.text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
       <section>
         <h2 className="text-sm font-semibold text-white mb-3 flex items-center gap-2">
           <BookOpen className="w-4 h-4 text-accent-blue" />
@@ -525,7 +564,8 @@ export default function LearnPage() {
                 <th className="pb-2 pr-4 font-medium">Indicator</th>
                 <th className="pb-2 pr-4 font-medium">Best For</th>
                 <th className="pb-2 pr-4 font-medium text-green-400">Bullish Read</th>
-                <th className="pb-2 font-medium text-red-400">Bearish Read</th>
+                <th className="pb-2 pr-4 font-medium text-red-400">Bearish Read</th>
+                <th className="pb-2 font-medium text-yellow-400">Note</th>
               </tr>
             </thead>
             <tbody className="text-gray-300">
@@ -537,7 +577,8 @@ export default function LearnPage() {
                   <td className="py-2 pr-4 font-medium text-white">{indicator.name}</td>
                   <td className="py-2 pr-4 text-gray-400">{indicator.use}</td>
                   <td className="py-2 pr-4 text-green-400">{indicator.bullish}</td>
-                  <td className="py-2 text-red-400">{indicator.bearish}</td>
+                  <td className="py-2 pr-4 text-red-400">{indicator.bearish}</td>
+                  <td className="py-2 text-gray-400">{indicator.note}</td>
                 </tr>
               ))}
             </tbody>
