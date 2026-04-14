@@ -5,8 +5,8 @@ import {
   BookOpen, TrendingUp, TrendingDown, Globe, BarChart2,
   ShieldAlert, Target, Brain, Layers, ChevronDown, ChevronUp,
   DollarSign, Activity, Gauge, ArrowUpRight, ArrowDownRight,
-  Clock, Coins, Scale, AlertTriangle, Calculator, Network,
-  Search, BookMarked,
+  Coins, Scale, AlertTriangle, Calculator, Network,
+  Candy, Sigma, LineChart as LineIcon,
 } from 'lucide-react'
 
 // ─── Trading concepts data ──────────────────────────────────
@@ -37,7 +37,31 @@ const TRADING_CONCEPTS = [
       },
       {
         heading: 'Support & Resistance',
-        text: 'Support is a price level where demand is strong enough to prevent further decline. Resistance is where supply overwhelms demand and prevents further advance. These levels are identified from historical price action — previous highs, lows, and areas of consolidation. Breakouts above resistance or below support often lead to significant moves.',
+        text: 'Support is a price level where demand is strong enough to prevent further decline. Resistance is where supply overwhelms demand and prevents further advance. These levels are identified from historical price action — previous highs, lows, and areas of consolidation. Breakouts above resistance or below support often lead to significant moves. The more times a level is tested without breaking, the stronger it becomes — until the one test that finally breaks it.',
+      },
+      {
+        heading: 'Candlestick Patterns',
+        text: 'Individual candles encode open, high, low, and close. Key reversal patterns: Hammer (long lower wick at support = bullish reversal), Shooting Star (long upper wick at resistance = bearish reversal), Engulfing (current candle completely swallows prior = strong momentum shift), Doji (open ≈ close = indecision). Three White Soldiers and Three Black Crows confirm sustained momentum. Always confirm with volume and location in the trend.',
+      },
+      {
+        heading: 'Chart Patterns',
+        text: 'Classical technical patterns: Head & Shoulders (bearish reversal — left shoulder, higher head, right shoulder at same height), Inverse H&S (bullish version), Double Top / Double Bottom (two failed attempts at a level), Cup & Handle (bullish continuation after consolidation), Ascending/Descending Triangles (continuation patterns with measurable price targets equal to the triangle\'s widest point projected from the breakout).',
+      },
+      {
+        heading: 'Fibonacci Retracements',
+        text: 'After a strong move, price often retraces a portion before continuing. The key Fibonacci levels — 23.6%, 38.2%, 50%, 61.8%, 78.6% — are watched by millions of traders, making them self-fulfilling. A 50% retracement of a rally is considered healthy; deeper than 61.8% suggests the trend is failing. Extensions (127.2%, 161.8%, 261.8%) are used to project targets beyond the prior high.',
+      },
+      {
+        heading: 'Volume Analysis',
+        text: 'Volume confirms price. A breakout on low volume is suspect; a breakout on 2x-3x average volume is legitimate. Volume-Weighted Average Price (VWAP) is the institutional benchmark — price above VWAP favours bulls, below favours bears. Volume Profile shows where the most shares traded at each price, revealing "high-volume nodes" (strong S/R) and "low-volume gaps" (price moves through quickly).',
+      },
+      {
+        heading: 'Ichimoku Cloud',
+        text: 'A complete trend-following system in one indicator. The "cloud" (Kumo) is projected 26 periods ahead — price above the cloud = bullish, below = bearish, inside = no trade. The Tenkan (9) and Kijun (26) lines act as fast/slow MAs. The Chikou Span (current close plotted 26 bars back) confirms momentum. Popular in Japanese markets and for higher timeframe trend identification.',
+      },
+      {
+        heading: 'Divergence Trading',
+        text: 'A divergence occurs when price and an indicator disagree. Regular Bullish: price makes lower low, RSI makes higher low (reversal signal up). Regular Bearish: price higher high, RSI lower high (reversal down). Hidden Bullish: price higher low, RSI lower low (continuation of uptrend). Divergences on higher timeframes (4H, daily) are much more reliable than on 5-minute charts.',
       },
     ],
   },
@@ -65,6 +89,26 @@ const TRADING_CONCEPTS = [
         heading: 'Macroeconomic Indicators',
         text: 'Central bank interest rates, inflation (CPI), GDP growth, and unemployment data all impact asset prices. Higher interest rates tend to strengthen the dollar and weigh on risk assets. Gold traditionally benefits from inflation fears and economic uncertainty. Bitcoin increasingly responds to liquidity conditions and real interest rates.',
       },
+      {
+        heading: 'Free Cash Flow (FCF)',
+        text: 'FCF = Operating Cash Flow − Capital Expenditures. It\'s the cash a company generates after funding operations and maintaining assets — money available for dividends, buybacks, debt reduction, or growth. Warren Buffett prefers FCF to earnings because it\'s harder to manipulate. A company with growing FCF and a FCF yield (FCF / Market Cap) above the 10-year Treasury yield often represents good value.',
+      },
+      {
+        heading: 'Balance Sheet Health',
+        text: 'Key solvency ratios: Current Ratio (current assets / current liabilities) should be > 1.5. Debt-to-Equity < 1 indicates conservative financing. Interest Coverage (EBIT / interest expense) should be > 3x — below 1.5 is a red flag. Net Debt / EBITDA < 3x is considered safe for most industries. Companies entering recession with weak balance sheets are the ones that get crushed.',
+      },
+      {
+        heading: 'Return on Invested Capital (ROIC)',
+        text: 'ROIC = NOPAT / Invested Capital. It measures how efficiently a company turns capital into profit. Companies with sustained ROIC > 15% have durable competitive advantages (economic moats). ROIC vs WACC (Weighted Average Cost of Capital) is the ultimate test — if ROIC exceeds WACC, the company creates shareholder value; if not, it destroys it.',
+      },
+      {
+        heading: 'Sector Rotation',
+        text: 'Different sectors lead at different stages of the economic cycle. Early recovery: Financials, Consumer Discretionary, Industrials. Mid-cycle: Technology, Industrials. Late cycle: Energy, Materials. Recession: Consumer Staples, Utilities, Healthcare (defensive). Watching relative strength between sectors (e.g., XLP vs XLY ratio) gives clues about where the economy is in the cycle.',
+      },
+      {
+        heading: 'Insider Transactions',
+        text: 'Corporate insiders (CEOs, directors, 10%+ shareholders) must disclose trades via SEC Form 4 within 2 business days. Insiders sell for many reasons (diversification, tax, lifestyle) but buy for only one — they think the stock is going up. Clusters of insider buying near 52-week lows, especially by CFOs, have historically preceded strong returns.',
+      },
     ],
   },
   {
@@ -90,6 +134,26 @@ const TRADING_CONCEPTS = [
       {
         heading: 'Diversification',
         text: 'Spread your investments across different asset classes (stocks, crypto, commodities), sectors, and geographies. Correlation matters: during market crashes, highly correlated assets tend to fall together. Gold and Bitcoin sometimes act as hedges, but their correlation with equities varies over time.',
+      },
+      {
+        heading: 'The Kelly Criterion',
+        text: 'Kelly %: f* = (bp − q) / b, where b = odds, p = win probability, q = loss probability. This formula gives the mathematically optimal bet size to maximise long-term growth. Full Kelly is often too aggressive — most professionals use "Half Kelly" (half the recommended size) to reduce volatility. If you have a 55% win rate with 1:1 payoff, Kelly says bet 10% of capital; Half Kelly says 5%.',
+      },
+      {
+        heading: 'Maximum Drawdown Tolerance',
+        text: 'Before funding a strategy, decide the maximum drawdown you can psychologically tolerate — NOT financially, psychologically. Most traders abandon strategies at 20-30% drawdown regardless of their stated tolerance. A system with 40% historical max DD will almost certainly exceed that live. Plan for drawdowns 1.5x worse than any seen in backtesting.',
+      },
+      {
+        heading: 'Hedging Techniques',
+        text: 'Protective Put — buy a put option to insure long stock against a crash (cost: the premium). Collar — sell a call above current price to fund the protective put (caps upside). Inverse ETFs (SH, SQQQ) provide short exposure in a regular brokerage account. Futures hedging — short ES futures against an equity portfolio. Each hedge costs something; the question is whether the protection is worth the cost.',
+      },
+      {
+        heading: 'Black Swan Protection',
+        text: 'Nassim Taleb\'s "barbell strategy": keep 85-90% in very safe assets (Treasuries, cash) and 10-15% in extremely high-risk / high-reward bets (deep OTM options, small crypto positions). This caps downside while preserving massive upside from rare events. The 2020 pandemic and 2008 crash rewarded those holding long-dated volatility positions by 10-100x.',
+      },
+      {
+        heading: 'The 1% Rule & Martingale Trap',
+        text: 'Never risk more than 1% of your account on a single trade. Even a brilliant trader loses 40%+ of the time. Ten losses at 1% = -10% drawdown (recoverable). Ten losses at 5% = -40% drawdown (account-killer). NEVER use Martingale (doubling down after losses) — a 7-loss streak wipes out 128x your base bet. The math guarantees ruin.',
       },
     ],
   },
