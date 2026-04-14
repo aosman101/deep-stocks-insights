@@ -88,7 +88,7 @@ export default function LoginPage() {
               </div>
               <div className="leading-none">
                 <div className="font-mono text-[10px] uppercase tracking-[0.25em] text-parchment-muted">
-                  MMXXVI · Vol. I
+                  Research Terminal
                 </div>
                 <div className="font-display text-lg text-parchment tracking-tight mt-1">
                   Deep Stock <span className="italic text-ember-500">Insights</span>
@@ -104,7 +104,7 @@ export default function LoginPage() {
           {/* Hero copy */}
           <div className="flex-1 flex flex-col lg:justify-center max-w-2xl py-10 lg:py-20">
             <div className="eyebrow mb-6 animate-rise" style={{ animationDelay: '120ms' }}>
-              ── The Editorial Terminal
+              The Research Terminal
             </div>
 
             <h1
@@ -153,7 +153,7 @@ export default function LoginPage() {
 
           {/* Footer line */}
           <div className="mt-4 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.22em] text-parchment-faint animate-fade-in" style={{ animationDelay: '700ms' }}>
-            <span>§ 01 · Access</span>
+            <span>Access</span>
             <span className="hidden sm:inline">A Birkbeck Research Project</span>
             <span>Est. 2026</span>
           </div>

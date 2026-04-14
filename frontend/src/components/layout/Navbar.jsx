@@ -64,13 +64,12 @@ export default function Navbar({ onMenuToggle }) {
 
   return (
     <header className="relative flex-shrink-0 border-b border-surface-border bg-surface-card/70 backdrop-blur-md">
-      {/* Top meta strip — masthead date line */}
+      {/* Top meta strip */}
       <div className="hidden lg:flex items-center justify-between px-8 py-1.5 border-b border-surface-border/60 font-mono text-[9px] uppercase tracking-[0.22em] text-parchment-faint">
-        <span>Vol. I · Issue {Math.floor((Date.now() - new Date('2026-01-01').getTime()) / 86400000)}</span>
         <span>{issueDate}</span>
         <span className="flex items-center gap-2">
           <Radio className="w-2.5 h-2.5 text-bull animate-pulse" />
-          Live Feed · NYSE · NASDAQ · CME · BINANCE
+          Live · NYSE · NASDAQ · CME · BINANCE
         </span>
       </div>
 

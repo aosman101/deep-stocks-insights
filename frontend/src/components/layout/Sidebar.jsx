@@ -15,28 +15,16 @@ import {
 } from 'lucide-react'
 
 const NAV_ITEMS = [
-  { to: '/',              label: 'Home',            icon: Home,        section: '§01' },
-  { to: '/predict',       label: 'Predict',         icon: TrendingUp,  section: '§02' },
-  { to: '/graph-analysis',label: 'Graph Analysis',  icon: LineChart,   section: '§03' },
-  { to: '/comparison',    label: 'Comparison',      icon: GitCompare,  section: '§04' },
-  { to: '/ai-insights',   label: 'AI Insights',     icon: Sparkles,    section: '§05' },
-  { to: '/agent',         label: 'Agent Desk',      icon: Bot,         section: '§06' },
-  { to: '/learn',         label: 'Learn & Markets', icon: BookOpen,    section: '§07' },
+  { to: '/',              label: 'Home',            icon: Home       },
+  { to: '/predict',       label: 'Predict',         icon: TrendingUp },
+  { to: '/graph-analysis',label: 'Graph Analysis',  icon: LineChart  },
+  { to: '/comparison',    label: 'Comparison',      icon: GitCompare },
+  { to: '/ai-insights',   label: 'AI Insights',     icon: Sparkles   },
+  { to: '/agent',         label: 'Agent Desk',      icon: Bot        },
+  { to: '/learn',         label: 'Learn & Markets', icon: BookOpen   },
 ]
 
-const ADMIN_ITEM = { to: '/admin', label: 'Admin', icon: ShieldCheck, section: '§⚡' }
-
-function SectionMark({ mark, isActive }) {
-  return (
-    <span
-      className={`font-mono text-[9px] tracking-[0.15em] w-7 flex-shrink-0 ${
-        isActive ? 'text-ember-500' : 'text-parchment-faint'
-      }`}
-    >
-      {mark}
-    </span>
-  )
-}
+const ADMIN_ITEM = { to: '/admin', label: 'Admin', icon: ShieldCheck }
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth()
@@ -78,7 +66,6 @@ export default function Sidebar({ open, onClose }) {
             <X className="w-4 h-4" />
           </button>
 
-          <div className="eyebrow mb-2">MMXXVI · Vol. I</div>
           <div
             className="font-display font-light text-[26px] leading-[0.95] text-parchment tracking-tight"
             style={{ fontVariationSettings: '"opsz" 144, "SOFT" 40' }}
@@ -92,15 +79,15 @@ export default function Sidebar({ open, onClose }) {
           <div className="mt-3 flex items-center gap-2">
             <div className="h-1 w-1 rounded-full bg-bull animate-pulse" />
             <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-parchment-muted">
-              Terminal Online
+              Markets Online
             </div>
           </div>
         </div>
 
         {/* Nav */}
         <nav className="flex-1 px-3 py-5 space-y-0.5 overflow-y-auto">
-          <div className="eyebrow px-3 pb-3">── The Desk</div>
-          {NAV_ITEMS.map(({ to, label, icon: Icon, section }) => (
+          <div className="eyebrow px-3 pb-3">Navigation</div>
+          {NAV_ITEMS.map(({ to, label, icon: Icon }) => (
             <NavLink
               key={to}
               to={to}
@@ -116,8 +103,7 @@ export default function Sidebar({ open, onClose }) {
             >
               {({ isActive }) => (
                 <>
-                  <SectionMark mark={section} isActive={isActive} />
-                  <Icon className={`w-3.5 h-3.5 flex-shrink-0 transition-colors ${
+                  <Icon className={`w-4 h-4 flex-shrink-0 transition-colors ${
                     isActive ? 'text-ember-500' : 'text-parchment-muted group-hover:text-parchment-dim'
                   }`} />
                   <span className="font-medium tracking-tight flex-1">{label}</span>
@@ -129,7 +115,7 @@ export default function Sidebar({ open, onClose }) {
 
           {user?.role === 'admin' && (
             <>
-              <div className="eyebrow px-3 pb-3 pt-6">── Restricted</div>
+              <div className="eyebrow px-3 pb-3 pt-6">Restricted</div>
               <NavLink
                 to={ADMIN_ITEM.to}
                 onClick={handleNav}
@@ -143,8 +129,7 @@ export default function Sidebar({ open, onClose }) {
               >
                 {({ isActive }) => (
                   <>
-                    <SectionMark mark={ADMIN_ITEM.section} isActive={isActive} />
-                    <ADMIN_ITEM.icon className={`w-3.5 h-3.5 flex-shrink-0 ${
+                    <ADMIN_ITEM.icon className={`w-4 h-4 flex-shrink-0 ${
                       isActive ? 'text-ember-600' : 'text-parchment-muted'
                     }`} />
                     <span className="font-medium tracking-tight flex-1">{ADMIN_ITEM.label}</span>
@@ -173,7 +158,7 @@ export default function Sidebar({ open, onClose }) {
               </div>
               {user?.role === 'admin' && (
                 <div className="font-mono text-[9px] uppercase tracking-[0.18em] text-ember-500 mt-0.5">
-                  ★ Editor-in-Chief
+                  Administrator
                 </div>
               )}
             </div>
@@ -184,7 +169,7 @@ export default function Sidebar({ open, onClose }) {
             className="w-full flex items-center gap-2 px-3 py-2 border border-surface-border text-[11px] font-mono uppercase tracking-[0.15em] text-parchment-muted hover:text-bear hover:border-bear/50 hover:bg-bear/5 transition-all"
           >
             <LogOut className="w-3 h-3" />
-            Close Terminal
+            Sign Out
           </button>
         </div>
       </aside>
