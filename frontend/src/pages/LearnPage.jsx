@@ -749,12 +749,15 @@ export default function LearnPage() {
         </div>
       </section>
 
-      {/* ── Market Insight Tips ─────────────────────────────── */}
+      {/* ── Momentum Indicators ─────────────────────────────── */}
       <section className="card">
-        <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <Target className="w-4 h-4 text-accent-blue" />
-          Quick Reference: Indicator Signals
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-accent-blue" />
+          Momentum & Oscillator Indicators
         </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Measure the speed, strength and reversal potential of price moves.
+        </p>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -762,170 +765,436 @@ export default function LearnPage() {
                 <th className="pb-2 pr-4 font-medium">Indicator</th>
                 <th className="pb-2 pr-4 font-medium text-green-400">Bullish Signal</th>
                 <th className="pb-2 pr-4 font-medium text-red-400">Bearish Signal</th>
-                <th className="pb-2 font-medium text-yellow-400">Neutral</th>
+                <th className="pb-2 font-medium text-yellow-400">Neutral / Note</th>
               </tr>
             </thead>
             <tbody className="text-gray-300">
               <tr className="border-b border-surface-border/50">
                 <td className="py-2 pr-4 font-medium text-white">RSI (14)</td>
-                <td className="py-2 pr-4 text-green-400">Below 30 (oversold)</td>
-                <td className="py-2 pr-4 text-red-400">Above 70 (overbought)</td>
-                <td className="py-2 text-gray-400">30-70</td>
+                <td className="py-2 pr-4 text-green-400">Below 30 (oversold) + up-cross</td>
+                <td className="py-2 pr-4 text-red-400">Above 70 (overbought) + down-cross</td>
+                <td className="py-2 text-gray-400">30-70 · watch 50 line</td>
               </tr>
               <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">MACD</td>
+                <td className="py-2 pr-4 font-medium text-white">MACD (12,26,9)</td>
                 <td className="py-2 pr-4 text-green-400">MACD crosses above signal</td>
                 <td className="py-2 pr-4 text-red-400">MACD crosses below signal</td>
-                <td className="py-2 text-gray-400">Lines converging</td>
+                <td className="py-2 text-gray-400">Histogram shrinking</td>
               </tr>
               <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">Bollinger %B</td>
-                <td className="py-2 pr-4 text-green-400">Below 0.2 (near lower band)</td>
-                <td className="py-2 pr-4 text-red-400">Above 0.8 (near upper band)</td>
-                <td className="py-2 text-gray-400">0.2-0.8</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">ADX</td>
-                <td className="py-2 pr-4 text-green-400">Above 25 + DI+ {'>'} DI-</td>
-                <td className="py-2 pr-4 text-red-400">Above 25 + DI- {'>'} DI+</td>
-                <td className="py-2 text-gray-400">Below 25 (weak trend)</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">Stochastic</td>
+                <td className="py-2 pr-4 font-medium text-white">Stochastic (14,3)</td>
                 <td className="py-2 pr-4 text-green-400">K crosses above D below 20</td>
                 <td className="py-2 pr-4 text-red-400">K crosses below D above 80</td>
+                <td className="py-2 text-gray-400">20-80 range</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Stoch RSI</td>
+                <td className="py-2 pr-4 text-green-400">Below 0.2 and turning up</td>
+                <td className="py-2 pr-4 text-red-400">Above 0.8 and turning down</td>
+                <td className="py-2 text-gray-400">Very fast · noisy</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Williams %R (14)</td>
+                <td className="py-2 pr-4 text-green-400">Below −80 (oversold)</td>
+                <td className="py-2 pr-4 text-red-400">Above −20 (overbought)</td>
+                <td className="py-2 text-gray-400">−80 to −20</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">CCI (20)</td>
+                <td className="py-2 pr-4 text-green-400">Above −100 rising from below</td>
+                <td className="py-2 pr-4 text-red-400">Below +100 falling from above</td>
+                <td className="py-2 text-gray-400">±100 range = trendless</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">ROC (Rate of Change)</td>
+                <td className="py-2 pr-4 text-green-400">Crosses above zero</td>
+                <td className="py-2 pr-4 text-red-400">Crosses below zero</td>
+                <td className="py-2 text-gray-400">Around zero = stagnation</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">MFI (Money Flow)</td>
+                <td className="py-2 pr-4 text-green-400">Below 20 (volume-weighted oversold)</td>
+                <td className="py-2 pr-4 text-red-400">Above 80 (volume-weighted overbought)</td>
                 <td className="py-2 text-gray-400">20-80</td>
               </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">Volume</td>
-                <td className="py-2 pr-4 text-green-400">Rising price + rising volume</td>
-                <td className="py-2 pr-4 text-red-400">Rising price + falling volume</td>
-                <td className="py-2 text-gray-400">Average volume</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">Moving Avg (50/200)</td>
-                <td className="py-2 pr-4 text-green-400">Golden Cross (50 &gt; 200)</td>
-                <td className="py-2 pr-4 text-red-400">Death Cross (50 &lt; 200)</td>
-                <td className="py-2 text-gray-400">MAs flat / intertwined</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">OBV (On-Balance Volume)</td>
-                <td className="py-2 pr-4 text-green-400">Rising with price (confirm)</td>
-                <td className="py-2 pr-4 text-red-400">Falling while price rises (divergence)</td>
-                <td className="py-2 text-gray-400">Flat / mixed</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">ATR (Volatility)</td>
-                <td className="py-2 pr-4 text-green-400">Falling ATR + rising price</td>
-                <td className="py-2 pr-4 text-red-400">Rising ATR + falling price</td>
-                <td className="py-2 text-gray-400">Stable ATR</td>
-              </tr>
-              <tr className="border-b border-surface-border/50">
-                <td className="py-2 pr-4 font-medium text-white">Yield Curve (10Y − 2Y)</td>
-                <td className="py-2 pr-4 text-green-400">Steepening (&gt; 0)</td>
-                <td className="py-2 pr-4 text-red-400">Inverted (&lt; 0) — recession risk</td>
-                <td className="py-2 text-gray-400">Flat (~0)</td>
-              </tr>
               <tr>
-                <td className="py-2 pr-4 font-medium text-white">VIX (Fear Index)</td>
-                <td className="py-2 pr-4 text-green-400">Below 15 (calm / risk-on)</td>
-                <td className="py-2 pr-4 text-red-400">Above 30 (panic)</td>
-                <td className="py-2 text-gray-400">15-25 (normal)</td>
+                <td className="py-2 pr-4 font-medium text-white">Awesome Oscillator</td>
+                <td className="py-2 pr-4 text-green-400">Zero line cross up · twin peaks below</td>
+                <td className="py-2 pr-4 text-red-400">Zero line cross down · twin peaks above</td>
+                <td className="py-2 text-gray-400">Watch colour shifts</td>
               </tr>
             </tbody>
           </table>
         </div>
       </section>
 
-      {/* ── Glossary ────────────────────────────────────────── */}
-      <section>
-        <div className="flex items-center justify-between mb-3 flex-wrap gap-3">
-          <h2 className="text-sm font-semibold text-white flex items-center gap-2">
-            <BookMarked className="w-4 h-4 text-accent-blue" />
-            Glossary
-            <span className="font-mono text-[10px] text-gray-500 ml-1">
-              · {GLOSSARY.length} terms
-            </span>
-          </h2>
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 pointer-events-none" />
-            <input
-              type="text"
-              value={glossaryQuery}
-              onChange={e => setGlossaryQuery(e.target.value)}
-              placeholder="Search terms…"
-              className="input pl-9 py-2 text-xs"
-            />
-          </div>
+      {/* ── Trend & Volatility Indicators ────────────────────── */}
+      <section className="card">
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <LineIcon className="w-4 h-4 text-accent-blue" />
+          Trend & Volatility Indicators
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Identify trend direction, strength, and the market's expansion/contraction phases.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-surface-border">
+                <th className="pb-2 pr-4 font-medium">Indicator</th>
+                <th className="pb-2 pr-4 font-medium text-green-400">Bullish Signal</th>
+                <th className="pb-2 pr-4 font-medium text-red-400">Bearish Signal</th>
+                <th className="pb-2 font-medium text-yellow-400">Neutral / Note</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">50 / 200 SMA</td>
+                <td className="py-2 pr-4 text-green-400">Golden Cross (50 &gt; 200)</td>
+                <td className="py-2 pr-4 text-red-400">Death Cross (50 &lt; 200)</td>
+                <td className="py-2 text-gray-400">Intertwined = chop</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">EMA (20/50)</td>
+                <td className="py-2 pr-4 text-green-400">Price above both, 20 &gt; 50</td>
+                <td className="py-2 pr-4 text-red-400">Price below both, 20 &lt; 50</td>
+                <td className="py-2 text-gray-400">Compressing = breakout soon</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Bollinger Bands</td>
+                <td className="py-2 pr-4 text-green-400">Touch of lower band in uptrend</td>
+                <td className="py-2 pr-4 text-red-400">Touch of upper band in downtrend</td>
+                <td className="py-2 text-gray-400">Squeeze = breakout pending</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Bollinger %B</td>
+                <td className="py-2 pr-4 text-green-400">Below 0.2 (near lower band)</td>
+                <td className="py-2 pr-4 text-red-400">Above 0.8 (near upper band)</td>
+                <td className="py-2 text-gray-400">0.2 - 0.8 middle zone</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Keltner Channels</td>
+                <td className="py-2 pr-4 text-green-400">Close above upper = momentum</td>
+                <td className="py-2 pr-4 text-red-400">Close below lower = momentum</td>
+                <td className="py-2 text-gray-400">Inside BB = TTM squeeze</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">ADX (14)</td>
+                <td className="py-2 pr-4 text-green-400">Above 25 · +DI &gt; −DI</td>
+                <td className="py-2 pr-4 text-red-400">Above 25 · −DI &gt; +DI</td>
+                <td className="py-2 text-gray-400">Below 20 = no trend</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Ichimoku Cloud</td>
+                <td className="py-2 pr-4 text-green-400">Price above green cloud</td>
+                <td className="py-2 pr-4 text-red-400">Price below red cloud</td>
+                <td className="py-2 text-gray-400">Inside cloud = no trade</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Parabolic SAR</td>
+                <td className="py-2 pr-4 text-green-400">Dots below price</td>
+                <td className="py-2 pr-4 text-red-400">Dots above price</td>
+                <td className="py-2 text-gray-400">Choppy markets whipsaw</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">ATR (14)</td>
+                <td className="py-2 pr-4 text-green-400">Rising with trend = healthy</td>
+                <td className="py-2 pr-4 text-red-400">Spike + gap = climax</td>
+                <td className="py-2 text-gray-400">Use for stop-loss sizing</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">SuperTrend</td>
+                <td className="py-2 pr-4 text-green-400">Line flips green, below price</td>
+                <td className="py-2 pr-4 text-red-400">Line flips red, above price</td>
+                <td className="py-2 text-gray-400">Flip = trailing-stop exit</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Donchian Channel</td>
+                <td className="py-2 pr-4 text-green-400">Break of 20-day high</td>
+                <td className="py-2 pr-4 text-red-400">Break of 20-day low</td>
+                <td className="py-2 text-gray-400">Classic Turtle strategy</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-medium text-white">VIX (Fear Index)</td>
+                <td className="py-2 pr-4 text-green-400">Below 15 = risk-on</td>
+                <td className="py-2 pr-4 text-red-400">Above 30 = panic</td>
+                <td className="py-2 text-gray-400">15-25 = normal</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-
-        {filteredGlossary.length === 0 ? (
-          <div className="card text-center py-8">
-            <p className="text-sm text-gray-400">No terms match "{glossaryQuery}".</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {filteredGlossary.map(g => (
-              <div
-                key={g.term}
-                className="card hover:border-ember-500/40 transition-colors"
-              >
-                <div className="flex items-baseline justify-between gap-3 mb-1.5">
-                  <h3 className="font-display text-base text-white tracking-tight">
-                    {g.term}
-                  </h3>
-                  <div className="h-px flex-1 bg-surface-border/60" />
-                </div>
-                <p className="text-xs text-gray-300 leading-relaxed">
-                  {g.def}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
-      {/* ── Further Reading ─────────────────────────────────── */}
+      {/* ── Volume & Market-Breadth Indicators ───────────────── */}
       <section className="card">
-        <h2 className="text-sm font-semibold text-white mb-4 flex items-center gap-2">
-          <BookOpen className="w-4 h-4 text-accent-blue" />
-          Further Reading
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <BarChart2 className="w-4 h-4 text-accent-blue" />
+          Volume & Market-Breadth Indicators
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3 text-sm">
-          <div>
-            <p className="eyebrow mb-2">Foundational</p>
-            <ul className="space-y-1.5 text-gray-300">
-              <li>• <span className="text-white">A Random Walk Down Wall Street</span> — Burton Malkiel</li>
-              <li>• <span className="text-white">The Intelligent Investor</span> — Benjamin Graham</li>
-              <li>• <span className="text-white">Market Wizards</span> — Jack Schwager</li>
-              <li>• <span className="text-white">Reminiscences of a Stock Operator</span> — Edwin Lefèvre</li>
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow mb-2">Quantitative & Advanced</p>
-            <ul className="space-y-1.5 text-gray-300">
-              <li>• <span className="text-white">Advances in Financial Machine Learning</span> — Marcos López de Prado</li>
-              <li>• <span className="text-white">Option Volatility & Pricing</span> — Sheldon Natenberg</li>
-              <li>• <span className="text-white">Trading and Exchanges</span> — Larry Harris</li>
-              <li>• <span className="text-white">Active Portfolio Management</span> — Grinold & Kahn</li>
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow mb-2">Psychology & Risk</p>
-            <ul className="space-y-1.5 text-gray-300">
-              <li>• <span className="text-white">Thinking, Fast and Slow</span> — Daniel Kahneman</li>
-              <li>• <span className="text-white">The Black Swan</span> — Nassim Taleb</li>
-              <li>• <span className="text-white">Trading in the Zone</span> — Mark Douglas</li>
-            </ul>
-          </div>
-          <div>
-            <p className="eyebrow mb-2">Crypto & DeFi</p>
-            <ul className="space-y-1.5 text-gray-300">
-              <li>• <span className="text-white">The Bitcoin Standard</span> — Saifedean Ammous</li>
-              <li>• <span className="text-white">Mastering Bitcoin</span> — Andreas Antonopoulos</li>
-              <li>• <span className="text-white">How to DeFi</span> — CoinGecko</li>
-            </ul>
-          </div>
+        <p className="text-xs text-gray-400 mb-4">
+          Confirm moves with participation; detect hidden accumulation or distribution.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-surface-border">
+                <th className="pb-2 pr-4 font-medium">Indicator</th>
+                <th className="pb-2 pr-4 font-medium text-green-400">Bullish Signal</th>
+                <th className="pb-2 pr-4 font-medium text-red-400">Bearish Signal</th>
+                <th className="pb-2 font-medium text-yellow-400">Neutral / Note</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Volume</td>
+                <td className="py-2 pr-4 text-green-400">Rising price + rising volume</td>
+                <td className="py-2 pr-4 text-red-400">Rising price + falling volume</td>
+                <td className="py-2 text-gray-400">Average = no conviction</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">OBV (On-Balance)</td>
+                <td className="py-2 pr-4 text-green-400">New highs with price</td>
+                <td className="py-2 pr-4 text-red-400">Falling while price rises</td>
+                <td className="py-2 text-gray-400">Flat = range-bound</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">VWAP</td>
+                <td className="py-2 pr-4 text-green-400">Price above VWAP, VWAP rising</td>
+                <td className="py-2 pr-4 text-red-400">Price below VWAP, VWAP falling</td>
+                <td className="py-2 text-gray-400">Institutional benchmark</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Accum / Distribution</td>
+                <td className="py-2 pr-4 text-green-400">Rising A/D line</td>
+                <td className="py-2 pr-4 text-red-400">Falling A/D line</td>
+                <td className="py-2 text-gray-400">Divergence with price</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Chaikin Money Flow</td>
+                <td className="py-2 pr-4 text-green-400">Above 0 for 3+ weeks</td>
+                <td className="py-2 pr-4 text-red-400">Below 0 for 3+ weeks</td>
+                <td className="py-2 text-gray-400">Near zero = indecision</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Force Index</td>
+                <td className="py-2 pr-4 text-green-400">Rising and positive</td>
+                <td className="py-2 pr-4 text-red-400">Falling and negative</td>
+                <td className="py-2 text-gray-400">Spikes = climax moves</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Advance/Decline Line</td>
+                <td className="py-2 pr-4 text-green-400">New highs with index</td>
+                <td className="py-2 pr-4 text-red-400">Falling while index rises</td>
+                <td className="py-2 text-gray-400">Weak breadth warning</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">% Stocks Above 200 SMA</td>
+                <td className="py-2 pr-4 text-green-400">Rising through 50%</td>
+                <td className="py-2 pr-4 text-red-400">Falling through 50%</td>
+                <td className="py-2 text-gray-400">Below 20 = oversold market</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Put/Call Ratio</td>
+                <td className="py-2 pr-4 text-green-400">Above 1.2 (fear = contrarian buy)</td>
+                <td className="py-2 pr-4 text-red-400">Below 0.6 (greed = contrarian sell)</td>
+                <td className="py-2 text-gray-400">0.7 - 1.0 typical</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-medium text-white">New Highs − New Lows</td>
+                <td className="py-2 pr-4 text-green-400">Expanding positive</td>
+                <td className="py-2 pr-4 text-red-400">Expanding negative</td>
+                <td className="py-2 text-gray-400">Leading breadth indicator</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Macro & Intermarket Indicators ───────────────────── */}
+      <section className="card">
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <Globe className="w-4 h-4 text-accent-blue" />
+          Macro & Intermarket Signals
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Cross-asset relationships and macro data that drive all markets.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-surface-border">
+                <th className="pb-2 pr-4 font-medium">Indicator</th>
+                <th className="pb-2 pr-4 font-medium text-green-400">Risk-On Signal</th>
+                <th className="pb-2 pr-4 font-medium text-red-400">Risk-Off Signal</th>
+                <th className="pb-2 font-medium text-yellow-400">Typical Range</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Yield Curve (10Y − 2Y)</td>
+                <td className="py-2 pr-4 text-green-400">Steepening (&gt; 0)</td>
+                <td className="py-2 pr-4 text-red-400">Inverted (&lt; 0) — recession risk</td>
+                <td className="py-2 text-gray-400">−1% to +3% cyclical</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">DXY (Dollar Index)</td>
+                <td className="py-2 pr-4 text-green-400">Falling = bullish for stocks/crypto/gold</td>
+                <td className="py-2 pr-4 text-red-400">Rising = pressure on risk assets</td>
+                <td className="py-2 text-gray-400">90 - 110 typical band</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">10Y Treasury Yield</td>
+                <td className="py-2 pr-4 text-green-400">Stable or falling — bullish growth</td>
+                <td className="py-2 pr-4 text-red-400">Spiking &gt; 4.5% = valuation pressure</td>
+                <td className="py-2 text-gray-400">2-5% modern range</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Credit Spreads (HY-IG)</td>
+                <td className="py-2 pr-4 text-green-400">Tightening (&lt; 4%)</td>
+                <td className="py-2 pr-4 text-red-400">Widening (&gt; 6%) — stress</td>
+                <td className="py-2 text-gray-400">3-8% band</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Copper / Gold Ratio</td>
+                <td className="py-2 pr-4 text-green-400">Rising — growth accelerating</td>
+                <td className="py-2 pr-4 text-red-400">Falling — growth slowing</td>
+                <td className="py-2 text-gray-400">"Dr Copper" cycle proxy</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">CPI (YoY)</td>
+                <td className="py-2 pr-4 text-green-400">Falling toward 2% target</td>
+                <td className="py-2 pr-4 text-red-400">Above 4% = rate-hike pressure</td>
+                <td className="py-2 text-gray-400">Fed target: 2%</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Fed Funds Rate</td>
+                <td className="py-2 pr-4 text-green-400">Cutting cycle</td>
+                <td className="py-2 pr-4 text-red-400">Hiking cycle</td>
+                <td className="py-2 text-gray-400">Neutral ~2.5%</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Unemployment Rate</td>
+                <td className="py-2 pr-4 text-green-400">Stable 3.5-4.5%</td>
+                <td className="py-2 pr-4 text-red-400">Rising &gt; 0.5% from low (Sahm rule)</td>
+                <td className="py-2 text-gray-400">Lagging indicator</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">ISM Manufacturing PMI</td>
+                <td className="py-2 pr-4 text-green-400">Above 50 rising</td>
+                <td className="py-2 pr-4 text-red-400">Below 50 falling</td>
+                <td className="py-2 text-gray-400">50 = expansion line</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Fear & Greed Index</td>
+                <td className="py-2 pr-4 text-green-400">Below 25 (extreme fear = contrarian buy)</td>
+                <td className="py-2 pr-4 text-red-400">Above 75 (extreme greed = caution)</td>
+                <td className="py-2 text-gray-400">0-100 composite</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-medium text-white">BTC Dominance</td>
+                <td className="py-2 pr-4 text-green-400">Falling = alt-season</td>
+                <td className="py-2 pr-4 text-red-400">Rising in bear = flight to BTC</td>
+                <td className="py-2 text-gray-400">40-60% typical</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* ── Candlestick Pattern Reference ────────────────────── */}
+      <section className="card">
+        <h2 className="text-sm font-semibold text-white mb-1 flex items-center gap-2">
+          <Candy className="w-4 h-4 text-accent-blue" />
+          Candlestick Pattern Reference
+        </h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Single- and multi-candle reversal and continuation patterns, with reliability notes.
+        </p>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-400 border-b border-surface-border">
+                <th className="pb-2 pr-4 font-medium">Pattern</th>
+                <th className="pb-2 pr-4 font-medium">Type</th>
+                <th className="pb-2 pr-4 font-medium">Description</th>
+                <th className="pb-2 font-medium text-yellow-400">Reliability</th>
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Hammer</td>
+                <td className="py-2 pr-4 text-green-400">Bullish reversal</td>
+                <td className="py-2 pr-4 text-xs">Small body, long lower wick, at support</td>
+                <td className="py-2 text-yellow-400">★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Shooting Star</td>
+                <td className="py-2 pr-4 text-red-400">Bearish reversal</td>
+                <td className="py-2 pr-4 text-xs">Small body, long upper wick, at resistance</td>
+                <td className="py-2 text-yellow-400">★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Bullish Engulfing</td>
+                <td className="py-2 pr-4 text-green-400">Bullish reversal</td>
+                <td className="py-2 pr-4 text-xs">Green candle fully engulfs prior red</td>
+                <td className="py-2 text-yellow-400">★★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Bearish Engulfing</td>
+                <td className="py-2 pr-4 text-red-400">Bearish reversal</td>
+                <td className="py-2 pr-4 text-xs">Red candle fully engulfs prior green</td>
+                <td className="py-2 text-yellow-400">★★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Doji</td>
+                <td className="py-2 pr-4 text-gray-400">Indecision</td>
+                <td className="py-2 pr-4 text-xs">Open ≈ close, long wicks</td>
+                <td className="py-2 text-yellow-400">★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Morning Star</td>
+                <td className="py-2 pr-4 text-green-400">Bullish reversal</td>
+                <td className="py-2 pr-4 text-xs">Red → small body → green, 3-candle</td>
+                <td className="py-2 text-yellow-400">★★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Evening Star</td>
+                <td className="py-2 pr-4 text-red-400">Bearish reversal</td>
+                <td className="py-2 pr-4 text-xs">Green → small body → red, 3-candle</td>
+                <td className="py-2 text-yellow-400">★★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Three White Soldiers</td>
+                <td className="py-2 pr-4 text-green-400">Continuation up</td>
+                <td className="py-2 pr-4 text-xs">Three consecutive strong green candles</td>
+                <td className="py-2 text-yellow-400">★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Three Black Crows</td>
+                <td className="py-2 pr-4 text-red-400">Continuation down</td>
+                <td className="py-2 pr-4 text-xs">Three consecutive strong red candles</td>
+                <td className="py-2 text-yellow-400">★★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Piercing Line</td>
+                <td className="py-2 pr-4 text-green-400">Bullish reversal</td>
+                <td className="py-2 pr-4 text-xs">Green opens below prior low, closes &gt; 50% into red body</td>
+                <td className="py-2 text-yellow-400">★★★</td>
+              </tr>
+              <tr className="border-b border-surface-border/50">
+                <td className="py-2 pr-4 font-medium text-white">Dark Cloud Cover</td>
+                <td className="py-2 pr-4 text-red-400">Bearish reversal</td>
+                <td className="py-2 pr-4 text-xs">Red opens above prior high, closes &gt; 50% into green body</td>
+                <td className="py-2 text-yellow-400">★★★</td>
+              </tr>
+              <tr>
+                <td className="py-2 pr-4 font-medium text-white">Marubozu</td>
+                <td className="py-2 pr-4 text-gray-400">Strong trend</td>
+                <td className="py-2 pr-4 text-xs">Full-body candle with no wicks — conviction</td>
+                <td className="py-2 text-yellow-400">★★★★</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </section>
 
