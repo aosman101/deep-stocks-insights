@@ -9,18 +9,18 @@
 
 @layer base {
   :root {
-    --ink:        #e5e9f0;
-    --ink-dim:    #c5ccd8;
-    --ink-muted:  #9ca8b8;
-    --ink-faint:  #5a6578;
-    --bg:         #0b0f17;
-    --bg-card:    #141a24;
-    --bg-hover:   #1c2430;
-    --bg-deep:    #0a0e16;
-    --border:     #232b38;
-    --border-lit: #3a4557;
-    --ember:      #3b82f6;
-    --ember-hot:  #60a5fa;
+    --ink:        #e4e4e7;
+    --ink-dim:    #d4d4d8;
+    --ink-muted:  #a1a1aa;
+    --ink-faint:  #71717a;
+    --bg:         #0a0a0b;
+    --bg-card:    #18181b;
+    --bg-hover:   #27272a;
+    --bg-deep:    #000000;
+    --border:     #27272a;
+    --border-lit: #3f3f46;
+    --ember:      #10b981;
+    --ember-hot:  #34d399;
     --bull:       #10b981;
     --bear:       #ef4444;
   }
@@ -40,14 +40,14 @@
     @apply bg-surface text-parchment font-sans;
     background-color: var(--bg);
     background-image:
-      radial-gradient(ellipse 90% 60% at 15% -10%, rgba(59, 130, 246, 0.14), transparent 55%),
-      radial-gradient(ellipse 70% 50% at 90% 110%, rgba(37, 99, 235, 0.10), transparent 60%),
-      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(20, 26, 36, 0.5), transparent 70%);
+      radial-gradient(ellipse 90% 60% at 15% -10%, rgba(16, 185, 129, 0.08), transparent 55%),
+      radial-gradient(ellipse 70% 50% at 90% 110%, rgba(16, 185, 129, 0.05), transparent 60%),
+      radial-gradient(ellipse 50% 40% at 50% 50%, rgba(24, 24, 27, 0.5), transparent 70%);
     background-attachment: fixed;
   }
 
   /* Selection */
-  ::selection { background: rgba(59, 130, 246, 0.38); color: var(--ink); }
+  ::selection { background: rgba(16, 185, 129, 0.35); color: var(--ink); }
 
   /* Refined scrollbar — cobalt on graphite */
   ::-webkit-scrollbar { width: 10px; height: 10px; }
