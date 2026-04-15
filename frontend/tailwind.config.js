@@ -7,22 +7,22 @@ export default {
       colors: {
         // Graphite & Cobalt — layered dark slate + cobalt
         surface: {
-          DEFAULT: '#0b0f17',   // graphite base
-          card:    '#141a24',   // raised panel
-          hover:   '#1c2430',   // hover / elevated
-          deep:    '#0a0e16',   // deepest well
-          border:  '#232b38',   // hairline
-          ring:    '#3a4557',   // steel ring
+          DEFAULT: '#0a0a0b',   // near-black base
+          card:    '#18181b',   // raised panel (zinc-900)
+          hover:   '#27272a',   // hover / elevated (zinc-800)
+          deep:    '#000000',   // deepest well
+          border:  '#27272a',   // hairline
+          ring:    '#3f3f46',   // ring (zinc-700)
         },
         parchment: {
-          DEFAULT: '#e5e9f0',   // primary text (cool white)
-          dim:     '#c5ccd8',   // dimmed
-          muted:   '#9ca8b8',   // muted grey-blue
-          faint:   '#5a6578',   // faint
+          DEFAULT: '#e4e4e7',   // primary text (zinc-200)
+          dim:     '#d4d4d8',   // dimmed (zinc-300)
+          muted:   '#a1a1aa',   // muted (zinc-400)
+          faint:   '#71717a',   // faint (zinc-500)
         },
         // Backwards-compat aliases (existing pages use these)
         accent: {
-          blue:   '#3b82f6',    // primary cobalt
+          blue:   '#10b981',    // remapped to emerald for legacy refs
           cyan:   '#06b6d4',    // sky cyan
           green:  '#10b981',    // emerald (bullish)
           red:    '#ef4444',    // rose (bearish)
@@ -30,21 +30,21 @@ export default {
           purple: '#8b5cf6',    // accent variety
         },
         ink: {
-          DEFAULT: '#e5e9f0',
-          dim:     '#c5ccd8',
-          muted:   '#9ca8b8',
+          DEFAULT: '#e4e4e7',
+          dim:     '#d4d4d8',
+          muted:   '#a1a1aa',
         },
         ember: {
-          50:  '#eff6ff',
-          100: '#dbeafe',
-          200: '#bfdbfe',
-          300: '#93c5fd',
-          400: '#60a5fa',
-          500: '#3b82f6',       // primary cobalt
-          600: '#2563eb',       // deep cobalt
-          700: '#1d4ed8',
-          800: '#1e40af',
-          900: '#1e3a8a',
+          50:  '#ecfdf5',
+          100: '#d1fae5',
+          200: '#a7f3d0',
+          300: '#6ee7b7',
+          400: '#34d399',
+          500: '#10b981',       // primary emerald
+          600: '#059669',
+          700: '#047857',
+          800: '#065f46',
+          900: '#064e3b',
         },
         btc:  '#f7931a',
         gold: '#f5a524',
@@ -73,13 +73,13 @@ export default {
       },
       boxShadow: {
         'inset-border': 'inset 0 0 0 1px rgba(255, 255, 255, 0.04)',
-        'ember-glow':   '0 0 40px -8px rgba(59, 130, 246, 0.48)',
-        'card':         'inset 0 1px 0 0 rgba(255,255,255,0.03), 0 8px 28px -14px rgba(0,0,0,0.65)',
-        'card-hover':   'inset 0 1px 0 0 rgba(255,255,255,0.05), 0 20px 50px -18px rgba(59,130,246,0.35)',
+        'ember-glow':   '0 0 40px -8px rgba(16, 185, 129, 0.45)',
+        'card':         'inset 0 1px 0 0 rgba(255,255,255,0.03), 0 8px 28px -14px rgba(0,0,0,0.75)',
+        'card-hover':   'inset 0 1px 0 0 rgba(255,255,255,0.05), 0 20px 50px -18px rgba(16,185,129,0.32)',
       },
       backgroundImage: {
         'grain':        "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.1' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")",
-        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(59,130,246,0.14), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(37,99,235,0.10), transparent 60%)',
+        'ember-radial': 'radial-gradient(ellipse 80% 50% at 20% 0%, rgba(16,185,129,0.10), transparent 60%), radial-gradient(ellipse 60% 50% at 80% 100%, rgba(16,185,129,0.07), transparent 60%)',
         'scanlines':    'repeating-linear-gradient(to bottom, transparent 0, transparent 2px, rgba(255,255,255,0.015) 2px, rgba(255,255,255,0.015) 3px)',
       },
       animation: {

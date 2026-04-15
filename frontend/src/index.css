@@ -304,28 +304,28 @@
    ────────────────────────────────────────────────────────────── */
 
 .recharts-cartesian-grid-horizontal line,
-.recharts-cartesian-grid-vertical line { stroke: #232b38; stroke-dasharray: 2 4; }
-.recharts-text { fill: #9ca8b8 !important; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
+.recharts-cartesian-grid-vertical line { stroke: #27272a; stroke-dasharray: 2 4; }
+.recharts-text { fill: #a1a1aa !important; font-family: 'JetBrains Mono', monospace; font-size: 11px; }
 .recharts-tooltip-wrapper { outline: none !important; }
 .recharts-default-tooltip {
-  background: rgba(20, 26, 36, 0.96) !important;
-  border: 1px solid #3a4557 !important;
+  background: rgba(24, 24, 27, 0.96) !important;
+  border: 1px solid #3f3f46 !important;
   border-radius: 0 !important;
-  color: #e5e9f0 !important;
+  color: #e4e4e7 !important;
   font-family: 'JetBrains Mono', monospace !important;
   font-size: 11px !important;
-  box-shadow: 0 20px 50px -18px rgba(0, 0, 0, 0.6) !important;
+  box-shadow: 0 20px 50px -18px rgba(0, 0, 0, 0.8) !important;
   backdrop-filter: blur(8px);
 }
 .recharts-default-tooltip .recharts-tooltip-label {
-  color: #60a5fa !important;
+  color: #34d399 !important;
   font-weight: 600 !important;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-size: 10px !important;
   margin-bottom: 4px !important;
 }
-.recharts-legend-item-text { color: #c5ccd8 !important; }
+.recharts-legend-item-text { color: #d4d4d8 !important; }
 
 /* Keep old accent-blue hex usage readable */
 .text-accent-blue { color: var(--ember) !important; }
