@@ -10,6 +10,7 @@ Agent Router — /api/agent
   POST   /sessions/{id}/trades/{trade_id}/close — manually close a trade
   GET    /sessions/{id}/stats   — session performance stats
   GET    /sessions/{id}/equity  — portfolio equity curve
+  GET    /sessions/{id}/decisions — agent decision journal
 """
 
 from datetime import datetime
@@ -20,11 +21,18 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.user import User
-from app.models.agent import AgentSession, AgentTrade, AgentPortfolioSnapshot, AgentStatus, TradeStatus
+from app.models.agent import (
+    AgentDecisionLog,
+    AgentSession,
+    AgentTrade,
+    AgentPortfolioSnapshot,
+    AgentStatus,
+    TradeStatus,
+)
 from app.core.dependencies import get_current_active_user
 from app.schemas.agent import (
     CreateSessionRequest, UpdateSessionRequest, SessionResponse,
-    TradeResponse, CloseTradeRequest, SnapshotResponse,
+    TradeResponse, CloseTradeRequest, DecisionLogResponse, SnapshotResponse,
     SessionStatsResponse, CycleResultResponse,
 )
 from app.services.agent_service import run_agent_cycle, get_session_stats, _close_trade
@@ -157,6 +165,21 @@ def list_trades(
     if status:
         q = q.filter(AgentTrade.status == status)
     return q.order_by(AgentTrade.opened_at.desc()).limit(limit).all()
+
+
+@router.get("/sessions/{session_id}/decisions", response_model=List[DecisionLogResponse])
+def list_decisions(
+    session_id: int,
+    limit: int = 75,
+    action: str = None,
+    user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    session = _get_user_session(session_id, user, db)
+    q = db.query(AgentDecisionLog).filter(AgentDecisionLog.session_id == session.id)
+    if action:
+        q = q.filter(AgentDecisionLog.action == action)
+    return q.order_by(AgentDecisionLog.created_at.desc()).limit(max(1, min(limit, 200))).all()
 
 
 @router.post("/sessions/{session_id}/trades/{trade_id}/close", response_model=TradeResponse)

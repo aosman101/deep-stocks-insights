@@ -4,12 +4,15 @@ import { useToast } from '../context/ToastContext'
 import {
   BarChart3,
   Bot,
+  Brain,
   ChevronRight,
+  ClipboardList,
   DollarSign,
   Pause,
   Play,
   Plus,
   RefreshCw,
+  ShieldAlert,
   Square,
   Trash2,
   TrendingDown,
@@ -42,6 +45,12 @@ const STATUS_STYLES = {
   stopped: 'bg-red-400/10 text-red-400 border border-red-400/20',
 }
 
+const DECISION_ACTION_STYLES = {
+  open: 'border border-green-400/20 bg-green-400/10 text-green-400',
+  hold: 'border border-blue-400/20 bg-blue-400/10 text-blue-400',
+  skip: 'border border-slate-500/20 bg-slate-500/10 text-slate-300',
+}
+
 function formatMoney(value) {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—'
   return value.toLocaleString('en-US', {
@@ -54,6 +63,17 @@ function formatMoney(value) {
 function formatPercent(value, digits = 1) {
   if (typeof value !== 'number' || Number.isNaN(value)) return '—'
   return `${value.toFixed(digits)}%`
+}
+
+function formatConfidence(value, digits = 0) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '—'
+  const pct = value <= 1 ? value * 100 : value
+  return `${pct.toFixed(digits)}%`
+}
+
+function formatMultiplier(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '1.00x'
+  return `${value.toFixed(2)}x`
 }
 
 function formatDate(value) {
@@ -92,6 +112,16 @@ function TradeStatusPill({ status }) {
   return (
     <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${className}`}>
       {status}
+    </span>
+  )
+}
+
+function DecisionActionPill({ action }) {
+  const className = DECISION_ACTION_STYLES[action] ?? DECISION_ACTION_STYLES.skip
+
+  return (
+    <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold capitalize ${className}`}>
+      {action}
     </span>
   )
 }
@@ -332,11 +362,89 @@ function TradesTable({ trades, closingTradeId, onCloseTrade }) {
   )
 }
 
+function DecisionJournal({ decisions }) {
+  if (!decisions.length) {
+    return (
+      <div className="flex min-h-[220px] flex-col items-center justify-center rounded-2xl border border-dashed border-surface-border text-center">
+        <ClipboardList className="mb-3 h-9 w-9 text-gray-600" />
+        <p className="text-sm text-gray-500">Run a cycle to record the first agent decision.</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[980px] text-sm">
+        <thead>
+          <tr className="border-b border-surface-border text-left text-xs uppercase tracking-wider text-gray-500">
+            <th className="px-2 py-3">Time</th>
+            <th className="px-2 py-3">Asset</th>
+            <th className="px-2 py-3">Action</th>
+            <th className="px-2 py-3">Rating</th>
+            <th className="px-2 py-3 text-right">Signal</th>
+            <th className="px-2 py-3 text-right">Memory</th>
+            <th className="px-2 py-3 text-right">Outcome</th>
+            <th className="px-2 py-3">Rationale</th>
+          </tr>
+        </thead>
+        <tbody>
+          {decisions.map((decision) => {
+            const outcomeClass =
+              decision.outcome_return > 0 ? 'text-green-400' :
+              decision.outcome_return < 0 ? 'text-red-400' :
+              'text-gray-400'
+            const flags = Array.isArray(decision.risk_flags) ? decision.risk_flags : []
+
+            return (
+              <tr key={decision.id} className="border-b border-surface-border/60 align-top text-gray-300">
+                <td className="px-2 py-3 text-xs text-gray-500">{formatDate(decision.created_at)}</td>
+                <td className="px-2 py-3 font-medium text-white">{decision.asset}</td>
+                <td className="px-2 py-3"><DecisionActionPill action={decision.action} /></td>
+                <td className="px-2 py-3">
+                  <div className="font-medium text-white">{decision.rating || 'Hold'}</div>
+                  <div className="mt-1 text-xs text-gray-500">{decision.market_regime || 'no regime'}</div>
+                </td>
+                <td className="px-2 py-3 text-right">
+                  <div className="font-medium text-white">{formatConfidence(decision.adjusted_confidence ?? decision.signal_strength, 0)}</div>
+                  <div className="mt-1 text-xs text-gray-500">{decision.signal || 'HOLD'}</div>
+                </td>
+                <td className="px-2 py-3 text-right">
+                  <div className={decision.memory_multiplier < 1 ? 'font-medium text-yellow-400' : 'font-medium text-gray-200'}>
+                    {formatMultiplier(decision.memory_multiplier)}
+                  </div>
+                  <div className="mt-1 text-xs text-gray-500">{decision.status}</div>
+                </td>
+                <td className={`px-2 py-3 text-right font-medium ${outcomeClass}`}>
+                  {decision.outcome_return == null ? '—' : formatPercent(decision.outcome_return * 100, 1)}
+                </td>
+                <td className="px-2 py-3">
+                  <p className="max-w-md text-gray-300">{decision.reflection || decision.rationale || 'No rationale recorded.'}</p>
+                  {flags.length ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {flags.slice(0, 3).map((flag) => (
+                        <span key={flag} className="inline-flex items-center gap-1 rounded-full border border-yellow-400/20 bg-yellow-400/10 px-2 py-0.5 text-xs text-yellow-300">
+                          <ShieldAlert className="h-3 w-3" />
+                          {flag}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function SessionDetail({ sessionId, onBack, onSessionsChanged }) {
   const [session, setSession] = useState(null)
   const [stats, setStats] = useState(null)
   const [trades, setTrades] = useState([])
   const [equity, setEquity] = useState([])
+  const [decisions, setDecisions] = useState([])
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [tradeFilter, setTradeFilter] = useState('all')
@@ -351,11 +459,12 @@ function SessionDetail({ sessionId, onBack, onSessionsChanged }) {
 
     try {
       const tradeStatus = tradeFilter === 'all' ? undefined : tradeFilter
-      const [sessionResponse, statsResponse, tradesResponse, equityResponse] = await Promise.all([
+      const [sessionResponse, statsResponse, tradesResponse, equityResponse, decisionsResponse] = await Promise.all([
         agentApi.getSession(sessionId),
         agentApi.getStats(sessionId),
         agentApi.getTrades(sessionId, tradeStatus),
         agentApi.getEquity(sessionId),
+        agentApi.getDecisions(sessionId, 75),
       ])
 
       setSession(sessionResponse.data)
@@ -367,6 +476,7 @@ function SessionDetail({ sessionId, onBack, onSessionsChanged }) {
           timestampLabel: formatDate(point.timestamp),
         }))
       )
+      setDecisions(decisionsResponse.data ?? [])
     } catch (error) {
       addToast(error.response?.data?.detail || 'Failed to load agent session', 'error')
     } finally {
@@ -640,6 +750,22 @@ function SessionDetail({ sessionId, onBack, onSessionsChanged }) {
             </div>
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Brain className="h-5 w-5 text-accent-blue" />
+              <h2 className="text-lg font-semibold text-white">Decision Journal</h2>
+            </div>
+            <p className="mt-1 text-sm text-gray-500">Open, hold, and skip calls with memory adjustments and resolved outcomes.</p>
+          </div>
+          <div className="rounded-full border border-surface-border px-3 py-1 text-xs font-medium text-gray-400">
+            {decisions.length} recent decisions
+          </div>
+        </div>
+        <DecisionJournal decisions={decisions} />
       </div>
 
       <div className="card">

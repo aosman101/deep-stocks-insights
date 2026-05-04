@@ -127,6 +127,7 @@ export const agentApi = {
   closeTrade:     (sid, tid, data) => api.post(`/api/agent/sessions/${sid}/trades/${tid}/close`, data),
   getStats:       (id)             => api.get(`/api/agent/sessions/${id}/stats`),
   getEquity:      (id)             => api.get(`/api/agent/sessions/${id}/equity`),
+  getDecisions:   (id, limit = 75) => api.get(`/api/agent/sessions/${id}/decisions`, { params: { limit } }),
 }
 
 // ── Admin ────────────────────────────────────────────────────

@@ -93,7 +93,7 @@ def _memory_assessment(
             AgentDecisionLog.status == "resolved",
             AgentDecisionLog.outcome_return.isnot(None),
         )
-        .order_by(AgentDecisionLog.resolved_at.desc().nullslast(), AgentDecisionLog.created_at.desc())
+        .order_by(AgentDecisionLog.resolved_at.desc(), AgentDecisionLog.created_at.desc())
         .limit(50)
         .all()
     )
@@ -236,21 +236,6 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
     )
 
     for asset in assets:
-        if open_count >= session.max_open_trades:
-            _log_decision(
-                db,
-                session,
-                asset=asset,
-                action="skip",
-                rationale=(
-                    f"Max open trade limit reached "
-                    f"({open_count}/{session.max_open_trades}); no new position evaluated."
-                ),
-            )
-            actions["skipped"].append({"asset": asset, "reason": "max_open_trades"})
-            continue
-
-        # Skip if we already have an open position in this asset
         existing = (
             db.query(AgentTrade)
             .filter(
@@ -279,6 +264,20 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
                 rationale="Existing open position is already active; duplicate exposure was avoided.",
             )
             actions["held"].append({"asset": asset, "reason": "existing_open_position"})
+            continue
+
+        if open_count >= session.max_open_trades:
+            _log_decision(
+                db,
+                session,
+                asset=asset,
+                action="skip",
+                rationale=(
+                    f"Max open trade limit reached "
+                    f"({open_count}/{session.max_open_trades}); no new position evaluated."
+                ),
+            )
+            actions["skipped"].append({"asset": asset, "reason": "max_open_trades"})
             continue
 
         try:
@@ -393,6 +392,14 @@ async def _evaluate_and_open(
     quote = await get_live_quote(asset)
     current_price = quote.get("price", 0)
     if not current_price:
+        _log_decision(
+            db,
+            session,
+            asset=asset,
+            action="skip",
+            rationale="Live quote was unavailable, so the agent could not price the setup.",
+            risk_flags=["quote_unavailable"],
+        )
         return None
 
     prediction = latest_prediction_snapshot(
@@ -403,23 +410,78 @@ async def _evaluate_and_open(
     )
     if prediction is None:
         logger.info(f"Agent skipped {asset}: no recent stored prediction was available")
+        _log_decision(
+            db,
+            session,
+            asset=asset,
+            action="skip",
+            entry_price=current_price,
+            rationale=(
+                f"No stored {AGENT_MAX_PREDICTION_AGE_HOURS}h prediction was available "
+                "for the 1d horizon."
+            ),
+            risk_flags=["missing_prediction"],
+        )
         return None
 
     signal = prediction.get("signal")
-    strength = prediction.get("signal_strength", 0)
+    strength = float(prediction.get("signal_strength") or 0)
     confidence = prediction.get("confidence", 0)
+    rating = _signal_to_rating(signal, strength)
+    market_regime = _market_regime(prediction)
+    memory = _memory_assessment(
+        db,
+        asset=asset,
+        signal=signal,
+        market_regime=market_regime,
+    )
+    memory_multiplier = float(memory.get("confidence_multiplier", 1.0) or 1.0)
+    adjusted_strength = _clamp(strength * memory_multiplier)
+    adjusted_confidence = _clamp(_confidence_to_unit(confidence, strength) * memory_multiplier)
+    memory_notes = [str(note) for note in memory.get("notes", []) if note]
 
-    if not signal or signal == "HOLD" or strength < SIGNAL_THRESHOLD:
+    if not signal or signal == "HOLD" or adjusted_strength < SIGNAL_THRESHOLD:
+        flags = []
+        if not signal:
+            flags.append("missing_signal")
+        if signal == "HOLD":
+            flags.append("model_hold")
+        if strength < SIGNAL_THRESHOLD:
+            flags.append("weak_signal")
+        if adjusted_strength < SIGNAL_THRESHOLD <= strength:
+            flags.append("decision_memory_dampened_signal")
+        flags.extend(memory_notes)
+        _log_decision(
+            db,
+            session,
+            asset=asset,
+            action="hold",
+            prediction_id=prediction.get("id"),
+            signal=signal,
+            rating=rating,
+            signal_strength=strength,
+            confidence=confidence,
+            adjusted_confidence=adjusted_confidence,
+            memory_multiplier=memory_multiplier,
+            entry_price=current_price,
+            decision_source="prediction_record",
+            rationale=(
+                f"Rating {rating}; adjusted signal strength {adjusted_strength:.2f} "
+                f"did not clear the {SIGNAL_THRESHOLD:.2f} trade threshold."
+            ),
+            risk_flags=flags,
+            market_regime=market_regime,
+        )
         return None
 
     # Position sizing: risk-based
     risk_amount = session.current_capital * session.risk_per_trade
     risk_levels = prediction.get("risk", {})
-    stop_loss = risk_levels.get("stop_loss_standard")
-    take_profit = risk_levels.get("take_profit_standard")
+    stop_loss = risk_levels.get("stop_loss_standard") or prediction.get("stop_loss")
+    take_profit = risk_levels.get("take_profit_standard") or prediction.get("take_profit")
 
     # Fallback stop-loss: 2% from entry
-    if not stop_loss:
+    if not stop_loss or not take_profit:
         if signal == "BUY":
             stop_loss = current_price * 0.98
             take_profit = current_price * 1.03
@@ -429,6 +491,26 @@ async def _evaluate_and_open(
 
     price_risk = abs(current_price - stop_loss)
     if price_risk <= 0:
+        _log_decision(
+            db,
+            session,
+            asset=asset,
+            action="skip",
+            prediction_id=prediction.get("id"),
+            signal=signal,
+            rating=rating,
+            signal_strength=strength,
+            confidence=confidence,
+            adjusted_confidence=adjusted_confidence,
+            memory_multiplier=memory_multiplier,
+            entry_price=current_price,
+            stop_loss=stop_loss,
+            take_profit=take_profit,
+            decision_source="prediction_record",
+            rationale="Stop-loss distance was zero or invalid, so the trade could not be sized.",
+            risk_flags=["invalid_stop_distance", *memory_notes],
+            market_regime=market_regime,
+        )
         return None
 
     quantity = risk_amount / price_risk
@@ -459,11 +541,39 @@ async def _evaluate_and_open(
         model_version_used=prediction.get("model_version"),
         decision_source="prediction_record",
         decision_notes=(
-            f"Opened from stored {prediction.get('model_key')} prediction "
-            f"run={prediction.get('run_id')} trigger={prediction.get('trigger_source')}"
+            f"{rating} from stored {prediction.get('model_key')} prediction "
+            f"run={prediction.get('run_id')} trigger={prediction.get('trigger_source')} "
+            f"memory_multiplier={memory_multiplier:.2f}"
         ),
     )
     db.add(trade)
+    db.flush()
+    _log_decision(
+        db,
+        session,
+        asset=asset,
+        action="open",
+        status="pending",
+        trade_id=trade.id,
+        prediction_id=prediction.get("id"),
+        signal=signal,
+        rating=rating,
+        signal_strength=strength,
+        confidence=confidence,
+        adjusted_confidence=adjusted_confidence,
+        memory_multiplier=memory_multiplier,
+        entry_price=current_price,
+        stop_loss=round(stop_loss, 2),
+        take_profit=round(take_profit, 2),
+        risk_reward_ratio=prediction.get("risk_reward_ratio"),
+        decision_source="prediction_record",
+        rationale=(
+            f"Opened {side.upper()} because {rating} signal strength {strength:.2f} "
+            f"remained {adjusted_strength:.2f} after decision-memory adjustment."
+        ),
+        risk_flags=memory_notes,
+        market_regime=market_regime,
+    )
 
     logger.info(
         f"Agent opened {side} {asset}: price={current_price:.2f} "
