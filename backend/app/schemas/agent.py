@@ -1,8 +1,9 @@
 """Pydantic schemas for the Agent API."""
 
+import json
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class CreateSessionRequest(BaseModel):
@@ -68,6 +69,53 @@ class TradeResponse(BaseModel):
     opened_at: Optional[datetime]
     closed_at: Optional[datetime]
 
+
+class DecisionLogResponse(BaseModel):
+    model_config = ConfigDict(protected_namespaces=(), from_attributes=True)
+    id: int
+    session_id: int
+    trade_id: Optional[int]
+    prediction_id: Optional[int]
+    asset: str
+    action: str
+    status: str
+    signal: Optional[str]
+    rating: Optional[str]
+    signal_strength: Optional[float]
+    confidence: Optional[float]
+    adjusted_confidence: Optional[float]
+    memory_multiplier: Optional[float]
+    entry_price: Optional[float]
+    stop_loss: Optional[float]
+    take_profit: Optional[float]
+    risk_reward_ratio: Optional[float]
+    decision_source: Optional[str]
+    rationale: Optional[str]
+    risk_flags: List[str] = Field(default_factory=list)
+    market_regime: Optional[str]
+    outcome_pnl: Optional[float]
+    outcome_return: Optional[float]
+    reflection: Optional[str]
+    created_at: Optional[datetime]
+    resolved_at: Optional[datetime]
+
+    @field_validator("risk_flags", mode="before")
+    @classmethod
+    def parse_risk_flags(cls, value):
+        if value is None or value == "":
+            return []
+        if isinstance(value, list):
+            return value
+        if isinstance(value, str):
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, list):
+                    return [str(item) for item in parsed if item]
+            except json.JSONDecodeError:
+                return [line.strip() for line in value.splitlines() if line.strip()]
+        return []
+
+
 class CloseTradeRequest(BaseModel):
     exit_price: float = Field(..., gt=0)
 
@@ -101,3 +149,4 @@ class CycleResultResponse(BaseModel):
     closed: list
     opened: list
     held: list
+    skipped: list = Field(default_factory=list)

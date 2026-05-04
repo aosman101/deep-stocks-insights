@@ -7,14 +7,15 @@ Strategies:
                     respects stop-loss/take-profit from risk_service.
 """
 
+import json
 import logging
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from sqlalchemy.orm import Session
 
 from app.models.agent import (
-    AgentSession, AgentTrade, AgentPortfolioSnapshot,
+    AgentDecisionLog, AgentSession, AgentTrade, AgentPortfolioSnapshot,
     AgentStatus, TradeSide, TradeStatus,
 )
 from app.services.market_service import get_live_quote
@@ -24,6 +25,168 @@ logger = logging.getLogger(__name__)
 
 SIGNAL_THRESHOLD = 0.4  # minimum signal strength to act
 AGENT_MAX_PREDICTION_AGE_HOURS = 48
+MEMORY_MIN_SAMPLES = 3
+MEMORY_RETURN_THRESHOLD = 0.01
+
+
+def _clamp(value: float, lower: float = 0.0, upper: float = 1.0) -> float:
+    return max(lower, min(upper, value))
+
+
+def _signal_to_rating(signal: Optional[str], strength: Optional[float]) -> str:
+    """Map BUY/HOLD/SELL to the 5-tier TradingAgents rating vocabulary."""
+    signal = (signal or "HOLD").upper()
+    strength = float(strength or 0.0)
+    if signal == "BUY":
+        return "Buy" if strength >= 0.75 else "Overweight"
+    if signal == "SELL":
+        return "Sell" if strength >= 0.75 else "Underweight"
+    return "Hold"
+
+
+def _market_regime(prediction: Dict[str, Any]) -> str:
+    change_pct = float(prediction.get("predicted_change_pct") or 0.0)
+    strength = float(prediction.get("signal_strength") or 0.0)
+
+    if change_pct >= 2.5:
+        trend = "bull_trend"
+    elif change_pct <= -2.5:
+        trend = "bear_trend"
+    else:
+        trend = "range"
+
+    conviction = "high_conviction" if strength >= 0.7 else "low_conviction"
+    return f"{trend}_{conviction}"
+
+
+def _confidence_to_unit(confidence: Optional[float], fallback: float) -> float:
+    if confidence is None:
+        return _clamp(fallback)
+    confidence = float(confidence)
+    if confidence > 1.0:
+        confidence = confidence / 100.0
+    return _clamp(confidence)
+
+
+def _encode_flags(flags: Optional[List[str]]) -> str:
+    if not flags:
+        return "[]"
+    return json.dumps(list(dict.fromkeys(flag for flag in flags if flag)))
+
+
+def _memory_assessment(
+    db: Session,
+    *,
+    asset: str,
+    signal: Optional[str],
+    market_regime: Optional[str],
+) -> Dict[str, Any]:
+    signal = (signal or "HOLD").upper()
+    if signal not in {"BUY", "SELL"}:
+        return {"samples": 0, "confidence_multiplier": 1.0, "notes": []}
+
+    rows = (
+        db.query(AgentDecisionLog)
+        .filter(
+            AgentDecisionLog.asset == asset.upper(),
+            AgentDecisionLog.signal == signal,
+            AgentDecisionLog.status == "resolved",
+            AgentDecisionLog.outcome_return.isnot(None),
+        )
+        .order_by(AgentDecisionLog.resolved_at.desc().nullslast(), AgentDecisionLog.created_at.desc())
+        .limit(50)
+        .all()
+    )
+
+    same_regime = [row for row in rows if row.market_regime == market_regime]
+    candidates = same_regime if len(same_regime) >= MEMORY_MIN_SAMPLES else rows
+    values = [float(row.outcome_return) for row in candidates if row.outcome_return is not None]
+
+    if len(values) < MEMORY_MIN_SAMPLES:
+        return {
+            "samples": len(values),
+            "same_regime_samples": len(same_regime),
+            "confidence_multiplier": 1.0,
+            "notes": ["Insufficient resolved decision memory for this setup"],
+        }
+
+    avg_return = sum(values) / len(values)
+    win_rate = sum(1 for value in values if value > 0) / len(values)
+    multiplier = 1.0
+    notes: List[str] = []
+
+    if avg_return <= -MEMORY_RETURN_THRESHOLD or win_rate < 0.40:
+        multiplier = 0.85
+        notes.append(
+            f"Decision memory: similar {signal} setups underperformed "
+            f"(avg return {avg_return:+.1%}, win rate {win_rate:.0%})"
+        )
+    elif avg_return >= MEMORY_RETURN_THRESHOLD and win_rate >= 0.60:
+        multiplier = 1.05
+        notes.append(
+            f"Decision memory: similar {signal} setups outperformed "
+            f"(avg return {avg_return:+.1%}, win rate {win_rate:.0%})"
+        )
+
+    return {
+        "samples": len(values),
+        "same_regime_samples": len(same_regime),
+        "avg_return": avg_return,
+        "win_rate": win_rate,
+        "confidence_multiplier": multiplier,
+        "notes": notes,
+    }
+
+
+def _log_decision(
+    db: Session,
+    session: AgentSession,
+    *,
+    asset: str,
+    action: str,
+    status: str = "observed",
+    trade_id: Optional[int] = None,
+    prediction_id: Optional[int] = None,
+    signal: Optional[str] = None,
+    rating: Optional[str] = None,
+    signal_strength: Optional[float] = None,
+    confidence: Optional[float] = None,
+    adjusted_confidence: Optional[float] = None,
+    memory_multiplier: Optional[float] = 1.0,
+    entry_price: Optional[float] = None,
+    stop_loss: Optional[float] = None,
+    take_profit: Optional[float] = None,
+    risk_reward_ratio: Optional[float] = None,
+    decision_source: str = "prediction_record",
+    rationale: Optional[str] = None,
+    risk_flags: Optional[List[str]] = None,
+    market_regime: Optional[str] = None,
+) -> AgentDecisionLog:
+    row = AgentDecisionLog(
+        session_id=session.id,
+        trade_id=trade_id,
+        prediction_id=prediction_id,
+        asset=asset.upper(),
+        action=action,
+        status=status,
+        signal=signal,
+        rating=rating or _signal_to_rating(signal, signal_strength),
+        signal_strength=signal_strength,
+        confidence=confidence,
+        adjusted_confidence=adjusted_confidence,
+        memory_multiplier=memory_multiplier,
+        entry_price=entry_price,
+        stop_loss=stop_loss,
+        take_profit=take_profit,
+        risk_reward_ratio=risk_reward_ratio,
+        decision_source=decision_source,
+        rationale=rationale,
+        risk_flags=_encode_flags(risk_flags),
+        market_regime=market_regime,
+    )
+    db.add(row)
+    db.flush()
+    return row
 
 
 async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
@@ -37,7 +200,7 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
     if session.status != AgentStatus.RUNNING.value:
         return {"skipped": True, "reason": f"session status is {session.status}"}
 
-    actions = {"closed": [], "opened": [], "held": []}
+    actions = {"closed": [], "opened": [], "held": [], "skipped": []}
     assets = [a.strip() for a in session.assets.split(",") if a.strip()]
 
     # Step 1: Check open trades
@@ -74,7 +237,18 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
 
     for asset in assets:
         if open_count >= session.max_open_trades:
-            break
+            _log_decision(
+                db,
+                session,
+                asset=asset,
+                action="skip",
+                rationale=(
+                    f"Max open trade limit reached "
+                    f"({open_count}/{session.max_open_trades}); no new position evaluated."
+                ),
+            )
+            actions["skipped"].append({"asset": asset, "reason": "max_open_trades"})
+            continue
 
         # Skip if we already have an open position in this asset
         existing = (
@@ -87,6 +261,24 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
             .first()
         )
         if existing:
+            _log_decision(
+                db,
+                session,
+                asset=asset,
+                action="hold",
+                status="observed",
+                trade_id=existing.id,
+                signal=existing.signal,
+                rating=_signal_to_rating(existing.signal, existing.signal_strength),
+                signal_strength=existing.signal_strength,
+                confidence=existing.confidence,
+                entry_price=existing.entry_price,
+                stop_loss=existing.stop_loss,
+                take_profit=existing.take_profit,
+                decision_source=existing.decision_source or "open_position",
+                rationale="Existing open position is already active; duplicate exposure was avoided.",
+            )
+            actions["held"].append({"asset": asset, "reason": "existing_open_position"})
             continue
 
         try:
@@ -97,8 +289,19 @@ async def run_agent_cycle(session: AgentSession, db: Session) -> Dict:
                     "entry_price": trade.entry_price, "quantity": trade.quantity,
                 })
                 open_count += 1
+            else:
+                actions["held"].append({"asset": asset})
         except Exception as e:
             logger.warning(f"Agent cycle: error evaluating {asset}: {e}")
+            _log_decision(
+                db,
+                session,
+                asset=asset,
+                action="skip",
+                rationale=f"Evaluation failed: {e}",
+                risk_flags=["evaluation_error"],
+            )
+            actions["skipped"].append({"asset": asset, "reason": "evaluation_error"})
 
     # Step 3: Take portfolio snapshot
     _take_snapshot(session, db)
@@ -141,6 +344,7 @@ def _close_trade(
 
     trade.pnl_pct = (trade.pnl / (trade.entry_price * trade.quantity)) * 100 if trade.entry_price else 0
     session.current_capital += trade.pnl
+    _resolve_trade_decision(trade, session, db)
 
     logger.info(
         f"Agent closed {trade.side} {trade.asset}: "
@@ -148,6 +352,38 @@ def _close_trade(
         f"pnl={trade.pnl:.2f} reason={reason}"
     )
     return True
+
+
+def _resolve_trade_decision(trade: AgentTrade, session: AgentSession, db: Session) -> None:
+    decision = (
+        db.query(AgentDecisionLog)
+        .filter(
+            AgentDecisionLog.session_id == session.id,
+            AgentDecisionLog.trade_id == trade.id,
+            AgentDecisionLog.action == "open",
+            AgentDecisionLog.status == "pending",
+        )
+        .order_by(AgentDecisionLog.created_at.desc())
+        .first()
+    )
+    if decision is None:
+        return
+
+    outcome_return = (trade.pnl_pct or 0.0) / 100.0
+    decision.status = "resolved"
+    decision.outcome_pnl = trade.pnl
+    decision.outcome_return = outcome_return
+    decision.resolved_at = datetime.utcnow()
+    if outcome_return > 0:
+        lesson = "The directional call worked; similar setups can keep their current confidence weight."
+    elif outcome_return < 0:
+        lesson = "The directional call failed; require stronger confirmation before repeating similar exposure."
+    else:
+        lesson = "The trade closed flat; keep the setup neutral until more samples resolve."
+    decision.reflection = (
+        f"{decision.rating or trade.signal or 'Hold'} {trade.asset} closed via {trade.exit_reason}. "
+        f"Return was {outcome_return:+.1%}. {lesson}"
+    )
 
 
 async def _evaluate_and_open(

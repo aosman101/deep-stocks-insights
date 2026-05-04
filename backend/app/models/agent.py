@@ -3,7 +3,7 @@ Deep Stock Insights - AI Agent Models
 Paper-trading agent sessions, trades, and portfolio snapshots.
 """
 
-from sqlalchemy import Column, Integer, String, Float, DateTime, Boolean, Text, ForeignKey, Enum
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
 from app.database import Base
@@ -56,6 +56,7 @@ class AgentSession(Base):
     # Relationships
     trades = relationship("AgentTrade", back_populates="session", lazy="dynamic")
     snapshots = relationship("AgentPortfolioSnapshot", back_populates="session", lazy="dynamic")
+    decisions = relationship("AgentDecisionLog", back_populates="session", lazy="dynamic")
 
     def __repr__(self):
         return f"<AgentSession id={self.id} name={self.name} status={self.status}>"
@@ -123,3 +124,43 @@ class AgentPortfolioSnapshot(Base):
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
 
     session = relationship("AgentSession", back_populates="snapshots")
+
+
+class AgentDecisionLog(Base):
+    """Audit trail for every agent decision, including holds and memory lessons."""
+    __tablename__ = "agent_decision_logs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    session_id = Column(Integer, ForeignKey("agent_sessions.id"), nullable=False, index=True)
+    trade_id = Column(Integer, ForeignKey("agent_trades.id"), nullable=True, index=True)
+    prediction_id = Column(Integer, ForeignKey("predictions.id"), nullable=True, index=True)
+
+    asset = Column(String(16), nullable=False, index=True)
+    action = Column(String(16), nullable=False, index=True)       # "open", "hold", "skip"
+    status = Column(String(16), nullable=False, default="observed", index=True)
+    signal = Column(String(8), nullable=True)
+    rating = Column(String(16), nullable=True)
+    signal_strength = Column(Float, nullable=True)
+    confidence = Column(Float, nullable=True)
+    adjusted_confidence = Column(Float, nullable=True)
+    memory_multiplier = Column(Float, nullable=True, default=1.0)
+
+    entry_price = Column(Float, nullable=True)
+    stop_loss = Column(Float, nullable=True)
+    take_profit = Column(Float, nullable=True)
+    risk_reward_ratio = Column(Float, nullable=True)
+
+    decision_source = Column(String(32), nullable=True, default="prediction_record")
+    rationale = Column(Text, nullable=True)
+    risk_flags = Column(Text, nullable=True)
+    market_regime = Column(String(64), nullable=True)
+
+    outcome_pnl = Column(Float, nullable=True)
+    outcome_return = Column(Float, nullable=True)
+    reflection = Column(Text, nullable=True)
+
+    created_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
+    resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+    session = relationship("AgentSession", back_populates="decisions")
+    trade = relationship("AgentTrade")
